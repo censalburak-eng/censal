@@ -1,0 +1,22 @@
+# EAS Build Ignore File
+# Ignore AI agent workspaces, skills and symlinks that cause Windows EPERM issues
+.agents/
+.aider-desk/
+.vscode/
+.git/
+.expo/
+node_modules/
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+.DS_Store
+*.pem
+*.tsbuildinfo
+example/
+web-build/
+dist/
+skills-lock.json
+.env
+.env.local
+android/
+ios/
