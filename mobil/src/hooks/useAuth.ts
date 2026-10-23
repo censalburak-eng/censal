@@ -3,7 +3,7 @@ import { User, Session } from '@supabase/supabase-js';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { supabase } from '../lib/supabase';
-import { signOut as authSignOut, signInWithSocialMock } from '../api/authApi';
+import { signOut as authSignOut, signInWithSocialMock, signInWithGoogleOAuth } from '../api/authApi';
 import { profileKeys } from './useProfile';
 import { getProfile } from '../api/profileApi';
 import { subscriptionKeys, getActiveSubscription } from '../api/subscriptionApi';
@@ -132,11 +132,13 @@ export const useSocialAuth = () => {
 
   return useMutation({
     mutationFn: async (provider: 'apple' | 'google') => {
+      if (provider === 'google') {
+        return await signInWithGoogleOAuth();
+      }
       return await signInWithSocialMock(provider);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: authKeys.all });
-      router.replace('/(auth)/complete-profile');
     },
   });
 };

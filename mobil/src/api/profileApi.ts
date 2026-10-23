@@ -12,13 +12,14 @@ export const getProfile = async (
     .from('profiles')
     .select('id, first_name, last_name, city_id, avatar_url, hide_phone, phone, role, is_banned, banned_at, banned_reason, created_at')
     .eq('id', userId)
-    .single();
+    .maybeSingle();
 
   if (error) {
-    if (error.code === 'PGRST116') {
-      return null;
-    }
     throw mapDatabaseError(error);
+  }
+
+  if (!data) {
+    return null;
   }
 
   let blockedCount = 0;

@@ -60,10 +60,12 @@ export const PhoneInputScreen: React.FC = () => {
       setActiveProvider(provider);
       setErrorCode(null);
 
-      await signInAsTestUser();
+      if (provider !== 'google') {
+        // Diğer sağlayıcılar (mock/test kullanıcı)
+        await signInAsTestUser();
+      }
 
       await socialAuthMutation.mutateAsync(provider);
-      router.replace('/(auth)/complete-profile');
     } catch (err: unknown) {
       const appError = mapAuthError(err);
       if (appError.code !== 'CANCELLED') {

@@ -1,0 +1,16 @@
+.agents/
+.aider*
+.aider-desk/
+.git/
+.expo/
+node_modules/
+admin/
+supabase/
+.vscode/
+.DS_Store
+*.pem
+*.tsbuildinfo
+dist/
+web-build/
+.env*
+.md
