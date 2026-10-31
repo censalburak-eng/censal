@@ -33,6 +33,8 @@ import {
   ShieldCheckIcon,
   ShieldAlertIcon,
   KeyRoundIcon,
+  CreditCardIcon,
+  XCircleIcon,
 } from "lucide-react";
 import { CITY_MAP } from "@/lib/cities";
 import type { AdminLog } from "@/api/logsApi";
@@ -52,6 +54,21 @@ function formatPhone(phone: string | null | undefined): string {
 // İnsan dilinde eylem bilgileri
 function getActionMeta(action: string) {
   const act = action.toUpperCase();
+
+  if (act.includes("APPROVE_PAYMENT") || act.includes("PAYMENT_APPROVE")) {
+    return {
+      title: "Ödeme Onaylandı",
+      badgeClass: "bg-emerald-600 hover:bg-emerald-700 text-white",
+      icon: <CheckCircle2Icon className="size-3.5" />,
+    };
+  }
+  if (act.includes("REJECT_PAYMENT") || act.includes("PAYMENT_REJECT")) {
+    return {
+      title: "Ödeme Reddedildi",
+      badgeClass: "bg-rose-700 hover:bg-rose-800 text-white",
+      icon: <XCircleIcon className="size-3.5" />,
+    };
+  }
 
   if (act === "ADMIN_ROLE_GRANT" || act.includes("ROLE_GRANT")) {
     return {
@@ -221,6 +238,41 @@ function getTargetDisplay(log: AdminLog) {
     );
   }
 
+  if (target_type === "payment_request" || target_type === "payment_requests" || log.action.toUpperCase().includes("PAYMENT")) {
+    const fullName = [target_first_name, target_last_name].filter(Boolean).join(" ");
+    const formattedPhoneNum = formatPhone(target_phone);
+    const detailUserId = (log.details as any)?.user_id;
+
+    return (
+      <div className="flex flex-col gap-0.5">
+        <div className="flex items-center gap-1.5 font-semibold text-foreground text-sm">
+          <div className="size-5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+            <CreditCardIcon className="size-3" />
+          </div>
+          <span className="truncate max-w-[170px]">
+            {fullName || (formattedPhoneNum ? formattedPhoneNum : "Ödeme Talebi")}
+          </span>
+          <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 font-normal text-emerald-600 border-emerald-500/30 shrink-0">
+            Ödeme
+          </Badge>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground ps-6">
+          {formattedPhoneNum ? (
+            <span className="font-mono text-[11px] font-medium text-foreground/80">{formattedPhoneNum}</span>
+          ) : detailUserId ? (
+            <span className="font-mono text-[10px] text-muted-foreground/70">
+              Kullanıcı: {String(detailUserId).slice(0, 8)}...
+            </span>
+          ) : target_id ? (
+            <span className="text-[10px] font-mono text-muted-foreground/60">
+              Talep #{target_id.slice(0, 8)}
+            </span>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+
   if (target_type === "reports") {
     return (
       <span className="inline-flex items-center gap-1.5 text-foreground font-medium text-sm">
@@ -238,8 +290,23 @@ function shouldShowTechnicalDetails(log: AdminLog): boolean {
   const keys = Object.keys(log.details);
   if (keys.length === 0) return false;
   // Basit tek alanlı veya zaten tam açıklanan alanlar için teknik JSON butonuna gerek yok
-  const simpleKeys = ["role", "revoked", "new_limit", "previous_limit", "is_banned", "reason"];
-  if (keys.length <= 2 && keys.every((k) => simpleKeys.includes(k))) return false;
+  const simpleKeys = [
+    "role",
+    "revoked",
+    "new_limit",
+    "previous_limit",
+    "is_banned",
+    "reason",
+    "amount",
+    "user_id",
+    "admin_note",
+    "package_type",
+    "message_id",
+    "room_id",
+    "p_request_id",
+    "request_id",
+  ];
+  if (keys.every((k) => simpleKeys.includes(k))) return false;
   return true;
 }
 
@@ -247,6 +314,63 @@ function shouldShowTechnicalDetails(log: AdminLog): boolean {
 function renderHumanDetails(log: AdminLog) {
   const d = log.details;
   const act = log.action.toUpperCase();
+
+  // 0. Ödeme Onay / Red İşlemleri (APPROVE_PAYMENT / REJECT_PAYMENT)
+  if (act.includes("APPROVE_PAYMENT") || act.includes("PAYMENT_APPROVE")) {
+    const pkgRaw = (d as any)?.package_type;
+    const pkgLabel =
+      pkgRaw === "yearly"
+        ? "Yıllık Plan"
+        : pkgRaw === "monthly"
+        ? "Aylık Plan"
+        : pkgRaw === "pin_24h"
+        ? "24 Saatlik Sabit İlan"
+        : (pkgRaw || "Abonelik");
+
+    const amountVal = (d as any)?.amount;
+    const amountText = amountVal ? `₺${Number(amountVal).toLocaleString("tr-TR", { minimumFractionDigits: 2 })}` : "";
+
+    return (
+      <div className="text-xs text-foreground font-medium space-y-0.5">
+        <p>
+          {amountText ? <strong className="text-emerald-600 dark:text-emerald-400 font-bold">{amountText}</strong> : null}{" "}
+          tutarındaki <strong>{pkgLabel}</strong> ödeme talebi onaylandı. Üyelik/sabit ilan aktifleştirildi.
+        </p>
+        {(d as any)?.admin_note && (d as any).admin_note !== "Yönetici tarafından onaylandı." && (
+          <p className="text-[11px] text-muted-foreground">Not: {String((d as any).admin_note)}</p>
+        )}
+      </div>
+    );
+  }
+
+  if (act.includes("REJECT_PAYMENT") || act.includes("PAYMENT_REJECT")) {
+    const pkgRaw = (d as any)?.package_type;
+    const pkgLabel =
+      pkgRaw === "yearly"
+        ? "Yıllık Plan"
+        : pkgRaw === "monthly"
+        ? "Aylık Plan"
+        : pkgRaw === "pin_24h"
+        ? "24 Saatlik Sabit İlan"
+        : (pkgRaw || "Abonelik");
+
+    const amountVal = (d as any)?.amount;
+    const amountText = amountVal ? `₺${Number(amountVal).toLocaleString("tr-TR", { minimumFractionDigits: 2 })}` : "";
+
+    return (
+      <div className="text-xs text-foreground font-medium space-y-0.5">
+        <p>
+          {amountText ? <strong className="text-rose-600 dark:text-rose-400 font-bold">{amountText}</strong> : null}{" "}
+          tutarındaki <strong>{pkgLabel}</strong> ödeme talebi reddedildi.
+        </p>
+        {(d as any)?.admin_note && (
+          <p className="text-[11px] text-rose-600 dark:text-rose-400">
+            Gerekçe: {String((d as any).admin_note)}
+          </p>
+        )}
+      </div>
+    );
+  }
 
   // 1. Yönetici Rolü İşlemleri
   if (act === "ADMIN_ROLE_GRANT" || act.includes("ROLE_GRANT")) {
@@ -420,8 +544,14 @@ export function LogsTab() {
         log.target_type === "profiles" ||
         log.target_type === "users";
 
+      const isPaymentLog =
+        log.target_type === "payment_request" ||
+        log.target_type === "payment_requests" ||
+        log.action.toUpperCase().includes("PAYMENT");
+
       const matchFilter =
         filterType === "all" ||
+        (filterType === "payments" && isPaymentLog) ||
         (filterType === "settings" && log.target_type === "settings") ||
         (filterType === "cities" && log.target_type === "cities") ||
         (filterType === "users" && isProfileLog) ||
@@ -494,15 +624,23 @@ export function LogsTab() {
               <Button
                 variant={filterType === "all" ? "default" : "outline"}
                 size="sm"
-                className="text-xs h-8"
+                className="text-xs h-8 shrink-0"
                 onClick={() => setFilterType("all")}
               >
                 Tümü
               </Button>
               <Button
+                variant={filterType === "payments" ? "default" : "outline"}
+                size="sm"
+                className="text-xs h-8 shrink-0"
+                onClick={() => setFilterType("payments")}
+              >
+                Ödeme Onayları
+              </Button>
+              <Button
                 variant={filterType === "cities" ? "default" : "outline"}
                 size="sm"
-                className="text-xs h-8"
+                className="text-xs h-8 shrink-0"
                 onClick={() => setFilterType("cities")}
               >
                 Şehir Kontenjanları
@@ -510,7 +648,7 @@ export function LogsTab() {
               <Button
                 variant={filterType === "settings" ? "default" : "outline"}
                 size="sm"
-                className="text-xs h-8"
+                className="text-xs h-8 shrink-0"
                 onClick={() => setFilterType("settings")}
               >
                 Fiyat & Mod Ayarları
@@ -518,7 +656,7 @@ export function LogsTab() {
               <Button
                 variant={filterType === "users" ? "default" : "outline"}
                 size="sm"
-                className="text-xs h-8"
+                className="text-xs h-8 shrink-0"
                 onClick={() => setFilterType("users")}
               >
                 Kullanıcı İşlemleri
@@ -526,7 +664,7 @@ export function LogsTab() {
               <Button
                 variant={filterType === "moderation" ? "default" : "outline"}
                 size="sm"
-                className="text-xs h-8"
+                className="text-xs h-8 shrink-0"
                 onClick={() => setFilterType("moderation")}
               >
                 Moderasyon
