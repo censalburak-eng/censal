@@ -1,0 +1,6 @@
+# Vercel Ignore File
+# Vercel sadece Next.js admin panelini derlemelidir, mobil uygulamayı yok say
+mobil/
+.expo/
+.agents/
+.aider-desk/

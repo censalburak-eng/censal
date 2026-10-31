@@ -22,17 +22,16 @@ skills-lock.json
 .env
 .env.local
 # Android build artifacts & local caches
-build/
+android/app/build/
+android/app/.cxx/
+android/build/
+android/.gradle/
+android/.kotlin/
 **/build/
-**/build/**
-.cxx/
 **/.cxx/
-**/.cxx/**
-.gradle/
 **/.gradle/
-**/.gradle/**
 .idea/
-**/.idea/**
+**/.idea/
 *.iml
 **/*.iml
 ios/
