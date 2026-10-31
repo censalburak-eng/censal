@@ -1,6 +1,6 @@
 import { google, androidpublisher_v3 } from "googleapis";
 import { createClient } from "@/lib/server";
-import { NextResponse } from "next/server";
+import { NextResponse, connection } from "next/server";
 
 export interface PlayProductItem {
   productId: string;
@@ -97,6 +97,7 @@ export async function verifyAdmin(): Promise<
   | { authorized: true; userId: string; userEmail: string }
   | { authorized: false; response: NextResponse }
 > {
+  await connection();
   try {
     const supabase = await createClient();
     const {

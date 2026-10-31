@@ -2,8 +2,6 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/server";
 import { verifyAdmin } from "@/lib/playAuth";
 
-export const dynamic = "force-dynamic";
-
 export async function GET() {
   const auth = await verifyAdmin();
   if (!auth.authorized) {

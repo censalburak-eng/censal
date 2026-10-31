@@ -11,8 +11,6 @@ import {
   MOCK_PLAY_PRODUCTS,
 } from "@/lib/playAuth";
 
-export const dynamic = "force-dynamic";
-
 interface PriceChangeRequestBody {
   type: "subscription" | "onetime";
   productId: string;

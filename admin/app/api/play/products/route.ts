@@ -9,8 +9,6 @@ import {
   type PlayProductItem,
 } from "@/lib/playAuth";
 
-export const dynamic = "force-dynamic";
-
 export async function GET() {
   // 1. Admin yetki kontrolü
   const auth = await verifyAdmin();
