@@ -5,6 +5,7 @@ import { ar } from './ar';
 import { en } from './en';
 import { ru } from './ru';
 import { Language, TranslationStructure } from './types';
+import { supabase } from '../lib/supabase';
 
 export * from './types';
 export { tr } from './tr';
@@ -57,6 +58,17 @@ export const I18nProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setLangState(newLang);
       await AsyncStorage.setItem(LANGUAGE_STORAGE_KEY, newLang);
       console.log(`[I18n] Dil değiştirildi: ${newLang}`);
+
+      // Kullanıcı oturumu varsa profildeki preferred_language alanını senkronize et
+      supabase.auth.getSession().then(({ data }) => {
+        if (data.session?.user?.id) {
+          supabase
+            .from('profiles')
+            .update({ preferred_language: newLang })
+            .eq('id', data.session.user.id)
+            .then();
+        }
+      });
     } catch (err) {
       console.error('[I18n] Dil kaydedilemedi:', err);
     }

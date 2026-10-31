@@ -69,18 +69,45 @@ export function LoginForm({
       }
 
       // 2. Admins tablosunda yetki kontrolü
-      const { data: adminRecord, error: adminError } = await supabase
+      const { data: adminRecord } = await supabase
         .from("admins")
         .select("role")
         .eq("user_id", data.user.id)
         .maybeSingle()
 
-      if (adminError || !adminRecord) {
+      // Profiles tablosunda admin rolü var mı kontrolü
+      const { data: profileRecord } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", data.user.id)
+        .maybeSingle()
+
+      const isProfileAdmin = profileRecord?.role === "admin"
+
+      // Admins tablosundaki toplam admin sayısını kontrol et
+      const { count: totalAdmins } = await supabase
+        .from("admins")
+        .select("*", { count: "exact", head: true })
+
+      // Eğer sistemde henüz hiç admin yoksa (ilk kurulum), bu giriş yapan ilk yönetici otomatik super_admin yapılır!
+      if (totalAdmins === 0) {
+        await supabase.from("admins").upsert({
+          user_id: data.user.id,
+          role: "super_admin",
+        })
+        await supabase.from("profiles").update({ role: "admin" }).eq("id", data.user.id)
+      } else if (!adminRecord && !isProfileAdmin) {
         // Admin yetkisi yoksa anında oturumu kapat
         await supabase.auth.signOut()
         setErrorMessage("Giriş başarısız: Yönetici (admin) yetkiniz bulunmamaktadır.")
         setIsLoading(false)
         return
+      } else if (!adminRecord && isProfileAdmin) {
+        // Profiles tablosunda admin ancak admins tablosuna henüz eklenmemişse otomatik eşle
+        await supabase.from("admins").upsert({
+          user_id: data.user.id,
+          role: "admin",
+        })
       }
 
       // 3. Yetkili yönetici: Dashboard'a yönlendir

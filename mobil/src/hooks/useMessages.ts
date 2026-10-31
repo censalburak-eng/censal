@@ -86,7 +86,7 @@ export const useRoomMessages = (roomId: number) => {
           if (newMsg.is_deleted) return;
 
           // Mesaj sahibinin profil adını, avatarını ve telefon gizlilik durumunu çek
-          let authorName = 'Hemşehri';
+          let authorName = 'Kullanıcı';
           let isPhoneHidden = true;
           let authorAvatar: string | null = null;
 
@@ -103,7 +103,7 @@ export const useRoomMessages = (roomId: number) => {
                 .eq('id', newMsg.user_id)
                 .maybeSingle();
               if (prof?.first_name) {
-                authorName = `${prof.first_name} ${prof.last_name ?? ''}`.trim() || 'Hemşehri';
+                authorName = `${prof.first_name} ${prof.last_name ?? ''}`.trim() || 'Kullanıcı';
               }
               if (prof?.avatar_url) {
                 authorAvatar = prof.avatar_url;
@@ -113,7 +113,7 @@ export const useRoomMessages = (roomId: number) => {
               }
               authorProfileCache.set(newMsg.user_id, { authorName, authorAvatar, isPhoneHidden });
             } catch {
-              // fallback 'Hemşehri'
+              // fallback 'Kullanıcı'
             }
           }
 
@@ -135,7 +135,7 @@ export const useRoomMessages = (roomId: number) => {
                   .maybeSingle();
                 if (parentRow) {
                   const pProf = (parentRow as any).profiles;
-                  const pName = pProf ? `${pProf.first_name ?? ''} ${pProf.last_name ?? ''}`.trim() || 'Hemşehri' : 'Hemşehri';
+                  const pName = pProf ? `${pProf.first_name ?? ''} ${pProf.last_name ?? ''}`.trim() || 'Kullanıcı' : 'Kullanıcı';
                   let pSnippet = parentRow.body;
                   if (parentRow.type === 'image') pSnippet = '📷 Fotoğraf';
                   else if (parentRow.type === 'audio') pSnippet = '🎤 Ses';

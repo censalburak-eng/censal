@@ -27,11 +27,15 @@ export const RoomsScreen: React.FC = () => {
   useConversationsRealtime(user?.id);
   // Odalardaki anlık çevrim içi sayısını takip et
   const roomCounts = useRoomCounts();
-  const { data: rooms = CITIES_DATA, isLoading, isError, refetch } = useRooms();
-  const { canAccessRooms } = useEntitlement(user?.id);
+  const { data: rooms = CITIES_DATA, isLoading: isRoomsLoading, isError, refetch } = useRooms();
+  const { canAccessRooms, isLoading: isEntitlementLoading } = useEntitlement(user?.id);
   const [searchQuery, setSearchQuery] = useState('');
   const { colors, isDark } = useTheme();
   const { t, isRTL } = useI18n();
+
+  // Abone olan kullanıcılara RevenueCat kontrolü bitmeden kilitli ekran / kilit ikonları
+  // gösterilmesini engellemek için yetkilendirme sorgusu bitene kadar iskelet (skeleton) yükleme gösterilir.
+  const isInitialLoading = isRoomsLoading || (isAuthenticated && isEntitlementLoading);
 
   const unreadMessagesCount = useMemo(() => {
     return conversations.reduce((acc, curr) => acc + (curr.unreadCount ?? 0), 0);
@@ -107,7 +111,7 @@ export const RoomsScreen: React.FC = () => {
   );
 
   const renderContent = () => {
-    if (isLoading) {
+    if (isInitialLoading) {
       return <SkeletonList count={8} />;
     }
 
@@ -161,7 +165,7 @@ export const RoomsScreen: React.FC = () => {
         onAvatarPress={() => { router.push('/profile'); }}
         onMessagesPress={() => { router.push('/conversations'); }}
       />
-      {!canAccessRooms && (
+      {!isInitialLoading && !canAccessRooms && (
         <Pressable
           onPress={() => router.push('/paywall')}
           style={({ pressed }) => [

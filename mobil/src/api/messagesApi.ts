@@ -106,16 +106,16 @@ export const fetchRoomMessages = async (
   const mapped = data.map((item: any) => {
     const profile = item.profiles ?? item.public_profiles;
     const userName = profile
-      ? `${profile.first_name ?? ''} ${profile.last_name ?? ''}`.trim() || 'Hemşehri'
-      : 'Hemşehri';
+      ? `${profile.first_name ?? ''} ${profile.last_name ?? ''}`.trim() || 'Kullanıcı'
+      : 'Kullanıcı';
 
     let replyToMessage: { userName: string; body: string } | null = null;
     if (item.reply_to && mapById.has(String(item.reply_to))) {
       const parent = mapById.get(String(item.reply_to));
       const parentProfile = parent.profiles ?? parent.public_profiles;
       const parentUserName = parentProfile
-        ? `${parentProfile.first_name ?? ''} ${parentProfile.last_name ?? ''}`.trim() || 'Hemşehri'
-        : 'Hemşehri';
+        ? `${parentProfile.first_name ?? ''} ${parentProfile.last_name ?? ''}`.trim() || 'Kullanıcı'
+        : 'Kullanıcı';
 
       let parentSnippet = parent.body;
       if (parent.type === 'image') parentSnippet = parent.caption ? `📷 ${parent.caption}` : '📷 Fotoğraf';

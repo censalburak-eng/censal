@@ -181,7 +181,7 @@ export function OverviewTab() {
                 </div>
                 <div className="font-bold text-sm">5. Ödeme & Ciro Takip Paneli</div>
                 <p className="text-xs text-muted-foreground">
-                  Canlı işlem geçmişi, günlük/haftalık/aylık ciro, Apple/Google/PayTR dağılımı ve başarısız denemeler.
+                  Canlı işlem geçmişi, günlük/haftalık/aylık ciro, Google Play Store ve iOS App Store dağılımı ve başarısız denemeler.
                 </p>
               </div>
             </Link>

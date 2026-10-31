@@ -115,13 +115,35 @@ export const usersApi = {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + durationDays);
 
-    const { error: subErr } = await supabase.from('subscriptions').insert({
-      user_id: userId,
-      plan,
-      source: 'manual',
-      status: 'active',
-      expires_at: expiresAt.toISOString(),
-    });
+    const { data: existing } = await supabase
+      .from('subscriptions')
+      .select('id')
+      .eq('user_id', userId)
+      .limit(1)
+      .maybeSingle();
+
+    let subErr;
+    if (existing) {
+      const res = await supabase
+        .from('subscriptions')
+        .update({
+          plan,
+          source: 'manual',
+          status: 'active',
+          expires_at: expiresAt.toISOString(),
+        })
+        .eq('user_id', userId);
+      subErr = res.error;
+    } else {
+      const res = await supabase.from('subscriptions').insert({
+        user_id: userId,
+        plan,
+        source: 'manual',
+        status: 'active',
+        expires_at: expiresAt.toISOString(),
+      });
+      subErr = res.error;
+    }
     if (subErr) throw subErr;
 
     const { data: { user } } = await supabase.auth.getUser();
@@ -173,6 +195,85 @@ export const usersApi = {
         new_expires_at: baseDate.toISOString(),
         subscription_id: subscriptionId,
       },
+    });
+  },
+
+  async addAdmin(userId: string, role = 'admin'): Promise<void> {
+    const supabase = createClient();
+
+    // 1. admins tablosuna ekle
+    const { error: adminErr } = await supabase.from('admins').upsert({
+      user_id: userId,
+      role,
+    });
+    if (adminErr) throw adminErr;
+
+    // 2. profiles tablosunda rolü admin yap
+    await supabase.from('profiles').update({ role: 'admin' }).eq('id', userId);
+
+    // 3. Log kaydı
+    const { data: { user } } = await supabase.auth.getUser();
+    await supabase.from('admin_logs').insert({
+      admin_id: user?.id ?? null,
+      action: 'ADMIN_ROLE_GRANT',
+      target_type: 'profiles',
+      target_id: userId,
+      details: { role },
+    });
+  },
+
+  async removeAdmin(userId: string): Promise<void> {
+    const supabase = createClient();
+
+    // 1. admins tablosundan sil
+    const { error: adminErr } = await supabase.from('admins').delete().eq('user_id', userId);
+    if (adminErr) throw adminErr;
+
+    // 2. profiles tablosunda rolü user yap
+    await supabase.from('profiles').update({ role: 'user' }).eq('id', userId);
+
+    // 3. Log kaydı
+    const { data: { user } } = await supabase.auth.getUser();
+    await supabase.from('admin_logs').insert({
+      admin_id: user?.id ?? null,
+      action: 'ADMIN_ROLE_REVOKE',
+      target_type: 'profiles',
+      target_id: userId,
+      details: { revoked: true },
+    });
+  },
+
+  async getAdmins(): Promise<{
+    user_id: string;
+    role: string;
+    created_at: string | null;
+    first_name?: string | null;
+    last_name?: string | null;
+    phone?: string | null;
+  }[]> {
+    const supabase = createClient();
+    const { data: admins, error } = await supabase
+      .from('admins')
+      .select('user_id, role, created_at')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    if (!admins || admins.length === 0) return [];
+
+    const userIds = admins.map((a) => a.user_id);
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, first_name, last_name, phone')
+      .in('id', userIds);
+
+    const profilesMap = new Map((profiles || []).map((p) => [p.id, p]));
+    return admins.map((a) => {
+      const p = profilesMap.get(a.user_id);
+      return {
+        ...a,
+        first_name: p?.first_name ?? null,
+        last_name: p?.last_name ?? null,
+        phone: p?.phone ?? null,
+      };
     });
   },
 };

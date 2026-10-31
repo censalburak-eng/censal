@@ -24,11 +24,14 @@ import { useStartConversation, useBlockUser } from "../hooks/useDirectMessages";
 import { useCreateReport } from "../hooks/useReports";
 import { useModal } from "../hooks/useModal";
 import { useEntitlement } from "../hooks/useEntitlement";
+import { useRevenueCat } from "../hooks/useRevenueCat";
 import { useRoomDetail } from "../hooks/useRooms";
 import { useRoomCounts, setMyRoom } from "../hooks/usePresence";
+import { useQueryClient } from "@tanstack/react-query";
 import { CITIES_DATA } from "../data/cities";
 import { RoomMessage, MessageType, PinnedListing } from "../types/messages.types";
 import { ChatRoomHeader } from "../components/ChatRoomHeader";
+import { requestPayment } from "../api/subscriptionApi";
 import { PinnedListingsBar } from "../components/PinnedListingsBar";
 import { ChatMessageItem } from "../components/ChatMessageItem";
 import { ChatInputBar } from "../components/ChatInputBar";
@@ -37,6 +40,7 @@ import { PinListingSheet } from "../components/ui/PinListingSheet";
 import { PinnedListingsModal } from "../components/ui/PinnedListingsModal";
 import { PinnedListingDetailModal } from "../components/ui/PinnedListingDetailModal";
 import { AppModal, LoadingView, ErrorView, EmptyView, ModalAction } from "../components/ui";
+import { requestNotificationPermissionAsync } from "../lib/notifications";
 import { useTheme } from "../theme";
 import { tokens } from "../theme/tokens";
 import { useI18n } from "../i18n";
@@ -48,9 +52,10 @@ type RoomDetailScreenProps = {
 
 export const RoomDetailScreen: React.FC<RoomDetailScreenProps> = ({ roomId }) => {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { user, isLoading: isAuthLoading } = useAuth();
   const { colors, isDark } = useTheme();
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const { show: showModal, hide: hideModal, modalProps } = useModal();
   const { settings } = useEntitlement(user?.id);
 
@@ -58,10 +63,12 @@ export const RoomDetailScreen: React.FC<RoomDetailScreenProps> = ({ roomId }) =>
   useFocusEffect(
     useCallback(() => {
       setMyRoom(roomId);
+      // Odaya girilince app_settings tazele (sabitleme fiyatı güncel gelsin)
+      queryClient.invalidateQueries({ queryKey: ['app_settings'] });
       return () => {
         setMyRoom(null);
       };
-    }, [roomId])
+    }, [roomId, queryClient])
   );
 
   const { data: roomDetail, refetch: refetchRoomDetail } = useRoomDetail(roomId);
@@ -85,8 +92,13 @@ export const RoomDetailScreen: React.FC<RoomDetailScreenProps> = ({ roomId }) =>
   const { data: pinnedListings = [] } = usePinnedListings(roomId);
 
 
-  // Sabit ilan fiyatı — app_settings'ten gelir
-  const pinPrice = settings?.price_pin_24h ? `₺${settings.price_pin_24h}` : undefined;
+  const { packages, pinPriceString, purchasePin, purchase: purchaseRevenueCatPackage } = useRevenueCat();
+  const [isPurchasingPin, setIsPurchasingPin] = useState(false);
+
+  // Sabit ilan fiyatı — yalnızca app_settings'ten gelir (admin panelinden kontrol edilir)
+  const pinPrice = settings?.price_pin_24h
+    ? `${String(settings.price_pin_24h).replace('₺', '').trim()} ₺`
+    : '300,00 ₺';
 
   const handlePaywallPress = () => router.push('/paywall');
   const sendMessageMutation = useSendMessage(roomId);
@@ -210,8 +222,8 @@ export const RoomDetailScreen: React.FC<RoomDetailScreenProps> = ({ roomId }) =>
 
   const { data: myProfile } = useProfile(user?.id);
   const myUserName = myProfile
-    ? `${myProfile.ad ?? ''} ${myProfile.soyad ?? ''}`.trim() || 'Hemşehri'
-    : 'Hemşehri';
+    ? `${myProfile.first_name ?? myProfile.ad ?? ''} ${myProfile.last_name ?? myProfile.soyad ?? ''}`.trim() || t.common.user
+    : t.common.user;
 
   const handleSendError = useCallback((err: unknown) => {
     const msg = err instanceof Error ? err.message : t.errors.unknown;
@@ -352,28 +364,93 @@ export const RoomDetailScreen: React.FC<RoomDetailScreenProps> = ({ roomId }) =>
       router.push("/(auth)/phone");
       return;
     }
-    setPinningMessage(message);
-  }, [user?.id, router]);
 
-  // ─── Pin Onayla ───────────────────────────────────────────
-  const handlePinConfirm = () => {
+    // 1. Ön Kontrol: Bu mesaj zaten odada aktif olarak sabitli mi?
+    const isAlreadyPinned = pinnedListings.some((p) => p.messageId === message.id);
+    if (isAlreadyPinned) {
+      showInfo(t.roomDetail.warning, t.roomDetail.pinAlreadyPinned);
+      return;
+    }
+
+    // 2. Ön Kontrol: Odanın sabit ilan kontenjanı dolu mu?
+    if (pinnedListings.length >= maxPins) {
+      showInfo(t.roomDetail.warning, t.roomDetail.pinQuotaFullMessage);
+      return;
+    }
+
+    setPinningMessage(message);
+  }, [user?.id, router, pinnedListings, maxPins, showInfo, t]);
+
+  // ─── Pin Onayla & Ödeme (Android: Google Play / iOS: Onay Talebi) ─
+  const handlePinConfirm = async () => {
     if (!pinningMessage) return;
-    pinMessageMutation.mutate(
-      { message: pinningMessage },
-      {
-        onSuccess: () => {
+
+    // Çifte güvenlik kontrolü:
+    const isAlreadyPinned = pinnedListings.some((p) => p.messageId === pinningMessage.id);
+    if (isAlreadyPinned) {
+      setPinningMessage(null);
+      showInfo(t.roomDetail.warning, t.roomDetail.pinAlreadyPinned);
+      return;
+    }
+
+    if (pinnedListings.length >= maxPins) {
+      setPinningMessage(null);
+      showInfo(t.roomDetail.warning, t.roomDetail.pinQuotaFullMessage);
+      return;
+    }
+
+    setIsPurchasingPin(true);
+    try {
+      if (Platform.OS === 'android') {
+        const purchaseRes = await purchasePin();
+        if (purchaseRes.userCancelled) {
+          setIsPurchasingPin(false);
+          return;
+        }
+
+        if (purchaseRes.error) {
+          setIsPurchasingPin(false);
           setPinningMessage(null);
-          showInfo(t.common.success, t.roomDetail.pinSuccess);
-        },
-        onError: (err) => {
-          setPinningMessage(null);
-          showInfo(
-            t.roomDetail.warning,
-            err instanceof Error && err.message ? err.message : t.errors.pinQuotaFull
-          );
-        },
+          showInfo(t.common.error, purchaseRes.error.message);
+          return;
+        }
+
+        if (user?.id) {
+          requestNotificationPermissionAsync(user.id, language);
+        }
+
+        pinMessageMutation.mutate(
+          { message: pinningMessage },
+          {
+            onSuccess: () => {
+              setPinningMessage(null);
+              showInfo(t.common.success, t.roomDetail.pinSuccess);
+            },
+            onError: (err) => {
+              setPinningMessage(null);
+              showInfo(
+                t.roomDetail.warning,
+                err instanceof Error && err.message ? err.message : t.errors.pinQuotaFull
+              );
+            },
+          }
+        );
+        return;
       }
-    );
+
+      // iOS ve Web için:
+      await requestPayment('pin_24h', pinningMessage.id, roomId);
+      setPinningMessage(null);
+      showInfo(t.roomDetail.pinRequestedTitle, t.roomDetail.pinRequestedMessage);
+    } catch (err: unknown) {
+      setPinningMessage(null);
+      showInfo(
+        t.common.error,
+        err instanceof Error && err.message ? err.message : 'Ödeme talebi oluşturulamadı'
+      );
+    } finally {
+      setIsPurchasingPin(false);
+    }
   };
 
   // ─── Mesaj Sil ────────────────────────────────────────────
@@ -409,6 +486,10 @@ export const RoomDetailScreen: React.FC<RoomDetailScreenProps> = ({ roomId }) =>
   const handleDirectMessage = useCallback((message: RoomMessage) => {
     if (!user?.id) { router.push("/(auth)/phone"); return; }
     if (message.userId === user.id) return;
+
+    // Özel mesaj başlatırken karşı tarafın yanıtlarını alabilmesi için izin iste
+    requestNotificationPermissionAsync(user.id, language);
+
     startConversationMutation.mutate(message.userId, {
       onSuccess: (conversationId) =>
         router.push({ pathname: "/dm/[id]", params: { id: conversationId } }),
@@ -418,7 +499,7 @@ export const RoomDetailScreen: React.FC<RoomDetailScreenProps> = ({ roomId }) =>
           err instanceof Error && err.message ? err.message : t.errors.unknown
         ),
     });
-  }, [user?.id, router, startConversationMutation, t]);
+  }, [user?.id, router, startConversationMutation, t, language]);
 
   // ─── Engelle ─────────────────────────────────────────────
   const handleBlockUser = useCallback((message: RoomMessage) => {
@@ -610,8 +691,8 @@ export const RoomDetailScreen: React.FC<RoomDetailScreenProps> = ({ roomId }) =>
         message={pinningMessage}
         activeCount={pinnedListings.length}
         maxPins={maxPins}
-        price={pinPrice ?? "199,99 ₺"}
-        isPinning={pinMessageMutation.isPending}
+        price={pinPrice}
+        isPinning={pinMessageMutation.isPending || isPurchasingPin}
         onClose={() => setPinningMessage(null)}
         onConfirm={handlePinConfirm}
       />

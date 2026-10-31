@@ -15,8 +15,25 @@ yarn-error.*
 example/
 web-build/
 dist/
+dist-test/
+mobilewright-report/
+test-results/
 skills-lock.json
 .env
 .env.local
-android/
+# Android build artifacts & local caches
+build/
+**/build/
+**/build/**
+.cxx/
+**/.cxx/
+**/.cxx/**
+.gradle/
+**/.gradle/
+**/.gradle/**
+.idea/
+**/.idea/**
+*.iml
+**/*.iml
 ios/
+

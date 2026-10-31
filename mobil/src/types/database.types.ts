@@ -440,6 +440,7 @@ export type Database = {
           starts_at: string | null
           status: string
           user_id: string
+          expiry_reminder_sent: boolean | null
         }
         Insert: {
           city_id: number
@@ -450,6 +451,7 @@ export type Database = {
           starts_at?: string | null
           status?: string
           user_id: string
+          expiry_reminder_sent?: boolean | null
         }
         Update: {
           city_id?: number
@@ -460,6 +462,7 @@ export type Database = {
           starts_at?: string | null
           status?: string
           user_id?: string
+          expiry_reminder_sent?: boolean | null
         }
         Relationships: [
           {
@@ -514,6 +517,10 @@ export type Database = {
           phone: string | null
           role: string | null
           last_seen_at: string | null
+          push_token: string | null
+          push_token_platform: string | null
+          push_token_updated_at: string | null
+          preferred_language: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -529,6 +536,10 @@ export type Database = {
           phone?: string | null
           role?: string | null
           last_seen_at?: string | null
+          push_token?: string | null
+          push_token_platform?: string | null
+          push_token_updated_at?: string | null
+          preferred_language?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -544,6 +555,10 @@ export type Database = {
           phone?: string | null
           role?: string | null
           last_seen_at?: string | null
+          push_token?: string | null
+          push_token_platform?: string | null
+          push_token_updated_at?: string | null
+          preferred_language?: string | null
         }
         Relationships: []
       }

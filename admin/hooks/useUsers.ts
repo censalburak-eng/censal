@@ -66,6 +66,30 @@ export function useUsers(search?: string) {
     },
   });
 
+  const addAdminMutation = useMutation({
+    mutationFn: ({ userId, role }: { userId: string; role?: string }) => usersApi.addAdmin(userId, role),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: userKeys.all });
+      queryClient.invalidateQueries({ queryKey: ['admin_logs'] });
+      toast.success('Yönetici (Admin) yetkisi başarıyla tanımlandı');
+    },
+    onError: (err: Error) => {
+      toast.error('Admin yetkisi verilemedi: ' + err.message);
+    },
+  });
+
+  const removeAdminMutation = useMutation({
+    mutationFn: (userId: string) => usersApi.removeAdmin(userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: userKeys.all });
+      queryClient.invalidateQueries({ queryKey: ['admin_logs'] });
+      toast.success('Yönetici yetkisi kaldırıldı');
+    },
+    onError: (err: Error) => {
+      toast.error('Admin yetkisi kaldırılamadı: ' + err.message);
+    },
+  });
+
   return {
     users: query.data ?? [],
     isLoading: query.isLoading,
@@ -77,5 +101,9 @@ export function useUsers(search?: string) {
     isGranting: grantSubscriptionMutation.isPending,
     extendSubscription: extendSubscriptionMutation.mutate,
     isExtending: extendSubscriptionMutation.isPending,
+    addAdmin: addAdminMutation.mutate,
+    isAddingAdmin: addAdminMutation.isPending,
+    removeAdmin: removeAdminMutation.mutate,
+    isRemovingAdmin: removeAdminMutation.isPending,
   };
 }

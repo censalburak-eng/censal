@@ -3,7 +3,7 @@ import { User, Session } from '@supabase/supabase-js';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { supabase } from '../lib/supabase';
-import { signOut as authSignOut, signInWithSocialMock, signInWithGoogleOAuth } from '../api/authApi';
+import { signOut as authSignOut, signInWithSocialMock, signInWithGoogleOAuth, signInWithEmail, signUpWithEmail } from '../api/authApi';
 import { profileKeys } from './useProfile';
 import { getProfile } from '../api/profileApi';
 import { subscriptionKeys, getActiveSubscription } from '../api/subscriptionApi';
@@ -136,6 +136,32 @@ export const useSocialAuth = () => {
         return await signInWithGoogleOAuth();
       }
       return await signInWithSocialMock(provider);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: authKeys.all });
+    },
+  });
+};
+
+export const useEmailSignIn = () => {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ email, password }: { email: string; password: string }) => {
+      return await signInWithEmail(email, password);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: authKeys.all });
+    },
+  });
+};
+
+export const useEmailSignUp = () => {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ email, password }: { email: string; password: string }) => {
+      return await signUpWithEmail(email, password);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: authKeys.all });

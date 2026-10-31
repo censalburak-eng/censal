@@ -6,6 +6,7 @@ import { tokens } from '../theme/tokens';
 import { useTheme } from '../theme';
 import { useI18n } from '../i18n';
 import { Badge } from './ui';
+import { router } from 'expo-router';
 
 type RoomHeaderProps = {
   totalRooms: number;

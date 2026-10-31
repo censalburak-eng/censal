@@ -24,6 +24,7 @@ export function useAppSettings() {
     onSuccess: (updated: AppSettings) => {
       queryClient.setQueryData(settingsKeys.app(), updated);
       queryClient.invalidateQueries({ queryKey: ['admin_logs'] });
+      queryClient.invalidateQueries({ queryKey: ['payments'] });
       toast.success('Ayarlar başarıyla güncellendi');
       logsApi.logAction({
         action: 'SETTINGS_UPDATE',

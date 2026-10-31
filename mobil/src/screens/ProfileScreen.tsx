@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, Linking, StatusBar, Switch } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, ScrollView, Linking, StatusBar, Switch, AppState } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useAuth } from '../hooks/useAuth';
@@ -18,7 +18,13 @@ import { ProfileSignOutButton } from '../components/ProfileSignOutButton';
 import { ProfileDeleteAccountButton } from '../components/ProfileDeleteAccountButton';
 import { ProfileSettingsModal } from '../components/ProfileSettingsModal';
 import { LegalTermsModal } from '../components/LegalTermsModal';
+import { SupportContactModal } from '../components/SupportContactModal';
 import { useBlockedUsers } from '@/hooks/useDirectMessages';
+import { useRevenueCat } from '../hooks/useRevenueCat';
+import {
+  isNotificationsEnabledAsync,
+  setNotificationsEnabledAsync,
+} from '../lib/notifications';
 
 const APP_VERSION = '1.0.4';
 
@@ -27,13 +33,72 @@ export const ProfileScreen: React.FC = () => {
   const { user, signOut } = useAuth();
   const { data: profile, isLoading, isError, refetch } = useProfile(user?.id);
   const { data: blockedList } = useBlockedUsers();
+  const { isPro, presentCustomerCenter } = useRevenueCat();
   const deleteAccountMutation = useDeleteAccount();
   const { modalProps, show, hide } = useModal();
   const { colors, isDark, setMode } = useTheme();
-  const { t, isRTL } = useI18n();
+  const { t, isRTL, language } = useI18n();
 
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
+  const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+
+  // Bildirim durumunu hem yerel tercihten hem de cihaz izninden sorgula
+  const syncNotificationStatus = useCallback(async () => {
+    const isEnabled = await isNotificationsEnabledAsync();
+    setNotificationsEnabled(isEnabled);
+  }, []);
+
+  useEffect(() => {
+    syncNotificationStatus();
+  }, [syncNotificationStatus]);
+
+  // Cihaz ayarlarına gidip dönüldüğünde veya uygulama öne geldiğinde durumu güncelle
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') {
+        syncNotificationStatus();
+      }
+    });
+    return () => sub.remove();
+  }, [syncNotificationStatus]);
+
+  // Profil sekmesine her odaklanıldığında durumu tazele
+  useFocusEffect(
+    useCallback(() => {
+      syncNotificationStatus();
+    }, [syncNotificationStatus])
+  );
+
+  const handleToggleNotifications = async (val: boolean) => {
+    if (val) {
+      const success = await setNotificationsEnabledAsync(true, user?.id, language);
+      if (success) {
+        setNotificationsEnabled(true);
+      } else {
+        setNotificationsEnabled(false);
+        show({
+          title: t.notifications.permissionDeniedTitle,
+          message: t.notifications.permissionDeniedBody,
+          actions: [
+            { label: t.common.cancel, style: 'cancel', onPress: hide },
+            {
+              label: t.common.ok,
+              style: 'default',
+              onPress: () => {
+                hide();
+                Linking.openSettings();
+              },
+            },
+          ],
+        });
+      }
+    } else {
+      setNotificationsEnabled(false);
+      await setNotificationsEnabledAsync(false, user?.id);
+    }
+  };
 
   // Tek tuşlu bilgi modalı
   const showInfo = (title: string, message: string, onOk?: () => void) =>
@@ -71,34 +136,8 @@ export const ProfileScreen: React.FC = () => {
     });
   };
 
-  const handleSupportPress = async () => {
-    const subject = encodeURIComponent('Censal Destek Talebi');
-    const body = encodeURIComponent(
-      `Merhaba Censal Destek Ekibi,\n\nKullanıcı ID: ${user?.id ?? 'Bilinmiyor'}\nSorun / Görüş:\n`
-    );
-    const mailUrl = `mailto:destek@censal.app?subject=${subject}&body=${body}`;
-
-    show({
-      title: t.profileScreen.support,
-      message: isRTL
-        ? 'يمكنك التواصل مع فريق الدعم لدينا على مدار الساعة عبر البريد الإلكتروني: destek@censal.app'
-        : 'Censal destek ve güvenlik ekibine e-posta ile 7/24 ulaşabilirsiniz (destek@censal.app).',
-      actions: [
-        { label: t.common.cancel, style: 'cancel', onPress: hide },
-        {
-          label: isRTL ? 'إرسال بريد إلكتروني' : 'E-posta Gönder',
-          style: 'default',
-          onPress: async () => {
-            hide();
-            try {
-              await Linking.openURL(mailUrl);
-            } catch {
-              showInfo(t.common.info, 'destek@censal.app');
-            }
-          },
-        },
-      ],
-    });
+  const handleSupportPress = () => {
+    setIsSupportModalOpen(true);
   };
 
   const handleDeleteAccount = () => {
@@ -145,7 +184,7 @@ export const ProfileScreen: React.FC = () => {
       iconName: 'receipt-outline',
       title: t.profileScreen.subscriptions,
       subtitle: t.profileScreen.subscriptionsSub,
-      onPress: () => router.push('/paywall'),
+      onPress: () => router.push('/subscriptions'),
     },
     {
       id: 'blocked_users',
@@ -164,6 +203,21 @@ export const ProfileScreen: React.FC = () => {
         <Switch
           value={isDark}
           onValueChange={(val) => setMode(val ? 'dark' : 'light')}
+          trackColor={{ false: colors.border, true: colors.primary }}
+          thumbColor="#FFFFFF"
+        />
+      ),
+    },
+    {
+      id: 'notifications',
+      iconName: 'notifications-outline',
+      title: t.profileScreen.notifications,
+      subtitle: notificationsEnabled ? t.profileScreen.on : t.profileScreen.off,
+      onPress: () => handleToggleNotifications(!notificationsEnabled),
+      renderRight: (
+        <Switch
+          value={notificationsEnabled}
+          onValueChange={handleToggleNotifications}
           trackColor={{ false: colors.border, true: colors.primary }}
           thumbColor="#FFFFFF"
         />
@@ -293,6 +347,13 @@ export const ProfileScreen: React.FC = () => {
       <LegalTermsModal
         visible={isLegalModalOpen}
         onClose={() => setIsLegalModalOpen(false)}
+      />
+
+      {/* YARDIM & DESTEK MODALI (WhatsApp & E-posta) */}
+      <SupportContactModal
+        visible={isSupportModalOpen}
+        onClose={() => setIsSupportModalOpen(false)}
+        userId={user?.id}
       />
 
       {/* Evrensel Uyarı & Bilgi Modalı */}

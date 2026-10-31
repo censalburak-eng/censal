@@ -161,7 +161,7 @@ export const MediaPickerSheet: React.FC<MediaPickerSheetProps> = ({
 
       <KeyboardAvoidingView
         style={{ position: 'absolute', bottom: 0, left: 0, right: 0 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         {/* Sheet */}
         <View
@@ -169,8 +169,9 @@ export const MediaPickerSheet: React.FC<MediaPickerSheetProps> = ({
             backgroundColor: colors.surface,
             borderTopLeftRadius: tokens.moderateScale(24),
             borderTopRightRadius: tokens.moderateScale(24),
-            paddingBottom: (Platform.OS === 'ios' ? tokens.verticalScale(24) : tokens.verticalScale(16)) + insets.bottom,
-            paddingTop: tokens.verticalScale(tokens.spacing.sm),
+            minHeight: tokens.verticalScale(280),
+            paddingBottom: Math.max(insets.bottom, Platform.OS === 'ios' ? 24 : 16) + tokens.verticalScale(12),
+            paddingTop: tokens.verticalScale(tokens.spacing.md),
             borderTopWidth: 1,
             borderTopColor: colors.border,
             shadowColor: '#000',

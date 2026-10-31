@@ -1,53 +1,175 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, Pressable, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, Pressable, Platform } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { tokens } from '../theme/tokens';
 import { useTheme } from '../theme';
 import { useI18n } from '../i18n';
 import { useEntitlement } from '../hooks/useEntitlement';
 import { useAuth } from '../hooks/useAuth';
+import { useRevenueCat } from '../hooks/useRevenueCat';
+import { useModal } from '../hooks/useModal';
 import { AppButton } from '../components/ui/AppButton';
+import { BackButton } from '../components/ui/BackButton';
+import { AppModal } from '../components/ui/AppModal';
 import { LegalTermsModal, LegalTab } from '../components/LegalTermsModal';
 import { SubscriptionPlan } from '../types/settings.types';
+import { requestPayment, getUserPendingPaymentRequest, subscriptionKeys } from '../api/subscriptionApi';
 
 export const PaywallScreen: React.FC = () => {
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
   const { t, isRTL } = useI18n();
   const { user, isAuthenticated } = useAuth();
-  const { settings, mockSubscribe, isSubscribing, hasActiveSubscription } = useEntitlement(user?.id);
+  const { settings, mockSubscribe, isSubscribing: isMockSubscribing, hasActiveSubscription } = useEntitlement(user?.id);
+  const { packages, purchase, restore, isPro, monthlyPriceString, yearlyPriceString } = useRevenueCat();
+  const [isProcessing, setIsProcessing] = useState(false);
+  const { show: showModal, hide: hideModal, modalProps } = useModal();
+
+  // Paywall her açıldığında app_settings'i tazele (fiyat değişimlerini anında yansıt)
+  useEffect(() => {
+    queryClient.invalidateQueries({ queryKey: ['app_settings'] });
+  }, [queryClient]);
 
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan>('yearly');
   const [legalModalVisible, setLegalModalVisible] = useState(false);
   const [legalModalTab, setLegalModalTab] = useState<LegalTab>('terms');
+  const [isAgreed, setIsAgreed] = useState(false);
 
-  const monthlyPrice = settings?.price_monthly ? `₺${settings.price_monthly}` : '₺99.99';
-  const yearlyPrice = settings?.price_yearly ? `₺${settings.price_yearly}` : '₺999.99';
+  const { data: pendingReq, refetch: refetchPendingReq } = useQuery({
+    queryKey: subscriptionKeys.pendingPayment(user?.id),
+    queryFn: () => getUserPendingPaymentRequest(user?.id),
+    enabled: !!user?.id,
+  });
+
+  const isPendingApproval = (Platform.OS === 'ios' || Platform.OS === 'web') && !!pendingReq;
+
+  const formatPriceDisplay = (val?: string | number) => {
+    if (!val) return '';
+    const clean = String(val).replace('₺', '').trim();
+    return `${clean} ₺`;
+  };
+
+  // Fiyatı yalnızca app_settings'ten al (admin panelinden kontrol edilir)
+  // RevenueCat/Google Play fiyatı görmezden gelinir
+  const monthlyPrice =
+    settings?.price_monthly
+      ? formatPriceDisplay(settings.price_monthly)
+      : '99,99 ₺';
+  const yearlyPrice =
+    settings?.price_yearly
+      ? formatPriceDisplay(settings.price_yearly)
+      : '999,99 ₺';
+
+  const selectedPrice = selectedPlan === 'yearly' ? yearlyPrice : monthlyPrice;
 
   const handleSubscribe = async () => {
     if (!isAuthenticated || !user) {
-      Alert.alert(
-        t.common.error,
-        t.auth.cardSubtitle,
-        [
-          { text: t.common.cancel, style: 'cancel' },
-          { text: t.auth.cardTitle, onPress: () => router.push('/(auth)/phone') },
-        ]
-      );
+      showModal({
+        title: t.common.error,
+        message: t.auth.cardSubtitle,
+        actions: [
+          { label: t.common.cancel, style: 'cancel', onPress: hideModal },
+          {
+            label: t.auth.cardTitle,
+            style: 'default',
+            onPress: () => {
+              hideModal();
+              router.push('/(auth)/phone');
+            },
+          },
+        ],
+      });
       return;
     }
 
+    if (!isAgreed) {
+      showModal({
+        title: t.common.info,
+        message: t.paywall.consentRequiredError,
+        actions: [{ label: t.common.understood, style: 'default', onPress: hideModal }],
+      });
+      return;
+    }
+
+    setIsProcessing(true);
     try {
-      await mockSubscribe(selectedPlan);
-      Alert.alert(
-        t.common.success,
-        t.paywall.subscribedSuccess,
-        [
+      if (Platform.OS === 'android') {
+        const targetPackage = selectedPlan === 'yearly' ? packages.yearly : packages.monthly;
+
+        if (targetPackage) {
+          // Gerçek Google Play In-App Purchase
+          const result = await purchase(targetPackage);
+          if (result.userCancelled) {
+            setIsProcessing(false);
+            return;
+          }
+
+          if (result.success) {
+            showModal({
+              title: t.common.success,
+              message: t.paywall.subscribedSuccess,
+              actions: [
+                {
+                  label: t.common.ok,
+                  style: 'default',
+                  onPress: () => {
+                    hideModal();
+                    if (router.canGoBack()) {
+                      router.back();
+                    } else {
+                      router.replace('/');
+                    }
+                  },
+                },
+              ],
+            });
+            setIsProcessing(false);
+            return;
+          } else if (result.error) {
+            throw new Error(result.error.message);
+          }
+        }
+
+        // Mağaza paketi henüz canlıda değilse mock fallback
+        await mockSubscribe(selectedPlan);
+        showModal({
+          title: t.common.success,
+          message: t.paywall.subscribedSuccess,
+          actions: [
+            {
+              label: t.common.ok,
+              style: 'default',
+              onPress: () => {
+                hideModal();
+                if (router.canGoBack()) {
+                  router.back();
+                } else {
+                  router.replace('/');
+                }
+              },
+            },
+          ],
+        });
+        return;
+      }
+
+      // iOS ve Web: iOS In-App Purchase henüz olmadığı için yönetici onaylı ödeme talebi
+      await requestPayment(selectedPlan);
+      await refetchPendingReq();
+      showModal({
+        title: t.paywall.paymentRequestedTitle,
+        message: t.paywall.paymentRequestedMessage,
+        actions: [
           {
-            text: t.common.ok,
+            label: t.common.ok,
+            style: 'default',
             onPress: () => {
+              hideModal();
               if (router.canGoBack()) {
                 router.back();
               } else {
@@ -55,25 +177,50 @@ export const PaywallScreen: React.FC = () => {
               }
             },
           },
-        ]
-      );
+        ],
+      });
     } catch (err: unknown) {
-      Alert.alert(t.common.error, err instanceof Error ? err.message : 'İşlem başarısız');
+      showModal({
+        title: t.common.error,
+        message: err instanceof Error ? err.message : t.paywall.purchaseFailed,
+        actions: [{ label: t.common.ok, style: 'default', onPress: hideModal }],
+      });
+    } finally {
+      setIsProcessing(false);
     }
   };
 
-  const handleRestore = () => {
-    Alert.alert(
-      t.paywall.restorePurchases,
-      hasActiveSubscription
-        ? t.paywall.subscribedSuccess
-        : (isRTL ? 'لا توجد مشتريات نشطة مسجلة.' : 'Kayıtlı aktif bir abonelik bulunamadı.')
-    );
+  const handleRestore = async () => {
+    setIsProcessing(true);
+    try {
+      const res = await restore();
+      if (res.isPro || hasActiveSubscription) {
+        showModal({
+          title: t.paywall.restorePurchases,
+          message: t.paywall.subscribedSuccess,
+          actions: [{ label: t.common.ok, style: 'default', onPress: hideModal }],
+        });
+      } else {
+        showModal({
+          title: t.paywall.restorePurchases,
+          message: t.paywall.noActiveSubscription,
+          actions: [{ label: t.common.ok, style: 'default', onPress: hideModal }],
+        });
+      }
+    } catch (err: unknown) {
+      showModal({
+        title: t.common.error,
+        message: err instanceof Error ? err.message : t.paywall.restoreFailed,
+        actions: [{ label: t.common.ok, style: 'default', onPress: hideModal }],
+      });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top', 'left', 'right']}>
-      {/* Üst Bar / Kapat & Geri Yükle */}
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top', 'left', 'right', 'bottom']}>
+      {/* Üst Bar / Geri Dön & Geri Yükle */}
       <View
         style={{
           flexDirection: isRTL ? 'row-reverse' : 'row',
@@ -83,27 +230,7 @@ export const PaywallScreen: React.FC = () => {
           paddingVertical: tokens.verticalScale(tokens.spacing.xs),
         }}
       >
-        <Pressable
-          onPress={() => router.back()}
-          accessibilityRole="button"
-          accessibilityLabel={t.common.cancel}
-          hitSlop={12}
-          style={({ pressed }) => [
-            {
-              width: tokens.scale(36),
-              height: tokens.scale(36),
-              borderRadius: tokens.radii.full,
-              backgroundColor: colors.surface,
-              borderWidth: 1,
-              borderColor: colors.border,
-              justifyContent: 'center',
-              alignItems: 'center',
-            },
-            pressed && { opacity: 0.7 },
-          ]}
-        >
-          <Ionicons name="close" size={20} color={colors.text} />
-        </Pressable>
+        <BackButton onPress={() => router.back()} />
 
         <Pressable onPress={handleRestore} hitSlop={8}>
           <Text
@@ -122,7 +249,7 @@ export const PaywallScreen: React.FC = () => {
         contentContainerStyle={{
           paddingHorizontal: tokens.scale(tokens.spacing.lg),
           paddingTop: tokens.verticalScale(tokens.spacing.sm),
-          paddingBottom: tokens.verticalScale(tokens.spacing.xxl),
+          paddingBottom: Math.max(insets.bottom, 16) + tokens.verticalScale(48),
           gap: tokens.verticalScale(tokens.spacing.lg),
         }}
         showsVerticalScrollIndicator={false}
@@ -182,6 +309,47 @@ export const PaywallScreen: React.FC = () => {
           </Text>
         </View>
 
+        {/* Onay Bekleyen Talep Bildirimi (Yalnızca iOS & Web) */}
+        {(Platform.OS === 'ios' || Platform.OS === 'web') && pendingReq && (
+          <View
+            style={{
+              flexDirection: isRTL ? 'row-reverse' : 'row',
+              alignItems: 'center',
+              gap: 12,
+              backgroundColor: isDark ? 'rgba(245, 158, 11, 0.2)' : '#FEF3C7',
+              borderRadius: tokens.radii.lg,
+              padding: tokens.scale(tokens.spacing.md),
+              borderWidth: 1,
+              borderColor: isDark ? '#F59E0B66' : '#FDE68A',
+            }}
+          >
+            <Ionicons name="hourglass-outline" size={24} color="#D97706" />
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text
+                style={{
+                  fontSize: tokens.moderateScale(tokens.typography.fontSize.sm),
+                  fontWeight: tokens.typography.fontWeight.bold,
+                  color: isDark ? '#FBBF24' : '#B45309',
+                  textAlign: isRTL ? 'right' : 'left',
+                }}
+              >
+                {t.paywall.pendingApproval}
+              </Text>
+              <Text
+                style={{
+                  fontSize: tokens.moderateScale(tokens.typography.fontSize.caption),
+                  color: colors.text,
+                  lineHeight: 16,
+                  textAlign: isRTL ? 'right' : 'left',
+                }}
+              >
+                {t.paywall.pendingRequestNotice} (
+                {pendingReq.package_type === 'yearly' ? t.paywall.yearlyPlan : t.paywall.monthlyPlan})
+              </Text>
+            </View>
+          </View>
+        )}
+
         {/* Özellikler Kartı */}
         <View
           style={{
@@ -240,6 +408,7 @@ export const PaywallScreen: React.FC = () => {
             </View>
           ))}
         </View>
+
 
         {/* Fiyat Plan Seçenekleri */}
         <View style={{ gap: tokens.verticalScale(tokens.spacing.sm) }}>
@@ -338,7 +507,7 @@ export const PaywallScreen: React.FC = () => {
                     color: colors.muted,
                   }}
                 >
-                  {isRTL ? 'دفعة واحدة سنوية' : 'Tek çekim / yıllık'}
+                  {t.paywall.yearlyBillingNote}
                 </Text>
               </View>
             </View>
@@ -421,7 +590,7 @@ export const PaywallScreen: React.FC = () => {
                     color: colors.muted,
                   }}
                 >
-                  {isRTL ? 'إلغاء في أي وقت' : 'İstediğin an iptal et'}
+                  {t.paywall.monthlyCancelNote}
                 </Text>
               </View>
             </View>
@@ -448,29 +617,78 @@ export const PaywallScreen: React.FC = () => {
           </Pressable>
         </View>
 
-        {/* Bilgilendirme Notu */}
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: tokens.scale(tokens.spacing.sm),
-            backgroundColor: isDark ? 'rgba(79, 70, 229, 0.12)' : 'rgba(79, 70, 229, 0.06)',
-            borderRadius: tokens.moderateScale(tokens.radii.lg),
-            padding: tokens.scale(tokens.spacing.md),
-          }}
+
+
+        {/* Mesafeli Satış & Ön Bilgilendirme Onay Kutusu (Checkbox) */}
+        <Pressable
+          onPress={() => setIsAgreed(!isAgreed)}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: isAgreed }}
+          style={({ pressed }) => [
+            {
+              flexDirection: isRTL ? 'row-reverse' : 'row',
+              alignItems: 'flex-start',
+              gap: tokens.scale(tokens.spacing.sm),
+              padding: tokens.scale(tokens.spacing.sm),
+              borderRadius: tokens.moderateScale(tokens.radii.lg),
+              backgroundColor: isAgreed
+                ? isDark
+                  ? 'rgba(79, 70, 229, 0.12)'
+                  : 'rgba(79, 70, 229, 0.05)'
+                : 'transparent',
+              borderWidth: 1.5,
+              borderColor: isAgreed ? colors.primary : isDark ? '#334155' : '#CBD5E1',
+            },
+            pressed && { opacity: 0.85 },
+          ]}
         >
-          <Ionicons name="information-circle-outline" size={20} color={colors.primaryText} />
-          <Text
+          <View
             style={{
-              flex: 1,
-              fontSize: tokens.moderateScale(tokens.typography.fontSize.caption),
-              color: colors.muted,
-              lineHeight: 17,
+              width: tokens.scale(22),
+              height: tokens.scale(22),
+              borderRadius: tokens.radii.xs,
+              borderWidth: 2,
+              borderColor: isAgreed ? colors.primary : colors.muted,
+              backgroundColor: isAgreed ? colors.primary : 'transparent',
+              justifyContent: 'center',
+              alignItems: 'center',
+              marginTop: 2,
             }}
           >
-            {t.paywall.paymentNotice}
-          </Text>
-        </View>
+            {isAgreed && <Ionicons name="checkmark" size={14} color="#FFFFFF" />}
+          </View>
+
+          <View style={{ flex: 1 }}>
+            <Text
+              style={{
+                fontSize: tokens.moderateScale(12),
+                color: colors.text,
+                lineHeight: 18,
+                textAlign: isRTL ? 'right' : 'left',
+              }}
+            >
+              {t.paywall.checkboxConsentPrefix}
+              <Text
+                onPress={(e) => {
+                  e.stopPropagation();
+                  setLegalModalTab('sales_terms');
+                  setLegalModalVisible(true);
+                }}
+                style={{
+                  color: colors.primary,
+                  fontWeight: tokens.typography.fontWeight.bold,
+                  textDecorationLine: 'underline',
+                }}
+              >
+                {t.paywall.distanceSalesLink}
+              </Text>
+              {t.paywall.checkboxConsentMiddle}
+              <Text style={{ color: colors.muted }}>
+                {t.paywall.checkboxConsentSuffix}
+              </Text>
+            </Text>
+          </View>
+        </Pressable>
 
         {/* Ana Aksiyon Butonu */}
         <View style={{ gap: tokens.verticalScale(tokens.spacing.sm) }}>
@@ -478,11 +696,17 @@ export const PaywallScreen: React.FC = () => {
             variant="primary"
             size="lg"
             fullWidth
-            label={t.paywall.subscribeButton}
-            icon="arrow-forward"
+            label={
+              isPendingApproval
+                ? t.paywall.pendingApproval
+                : Platform.OS === 'ios'
+                ? `${t.paywall.requestAccess} • ${selectedPrice}`
+                : `${t.paywall.subscribeButton} • ${selectedPrice}`
+            }
+            icon={isPendingApproval ? 'time-outline' : 'arrow-forward'}
             iconPosition="right"
-            loading={isSubscribing}
-            disabled={isSubscribing}
+            loading={isProcessing || isMockSubscribing}
+            disabled={!isAgreed || isProcessing || isMockSubscribing || isPendingApproval}
             onPress={handleSubscribe}
           />
 
@@ -498,14 +722,17 @@ export const PaywallScreen: React.FC = () => {
             {t.paywall.termsNotice}
           </Text>
 
-          {/* Apple Guideline 3.1.2 - Doğrudan Kullanım Koşulları & Gizlilik Bağlantıları */}
+          {/* Google Play & Apple Yasal Bağlantılar Bölümü */}
           <View
             style={{
               flexDirection: isRTL ? 'row-reverse' : 'row',
               justifyContent: 'center',
               alignItems: 'center',
-              gap: tokens.scale(tokens.spacing.md),
-              marginTop: tokens.verticalScale(tokens.spacing.xs),
+              flexWrap: 'wrap',
+              gap: tokens.scale(tokens.spacing.xs),
+              marginTop: tokens.verticalScale(tokens.spacing.sm),
+              paddingVertical: tokens.verticalScale(tokens.spacing.xs),
+              marginBottom: tokens.verticalScale(tokens.spacing.sm),
             }}
           >
             <Pressable
@@ -517,7 +744,7 @@ export const PaywallScreen: React.FC = () => {
             >
               <Text
                 style={{
-                  fontSize: tokens.moderateScale(12),
+                  fontSize: tokens.moderateScale(11),
                   color: colors.primaryText,
                   textDecorationLine: 'underline',
                   fontWeight: tokens.typography.fontWeight.medium,
@@ -527,7 +754,7 @@ export const PaywallScreen: React.FC = () => {
               </Text>
             </Pressable>
 
-            <Text style={{ color: colors.muted, fontSize: 12 }}>•</Text>
+            <Text style={{ color: colors.muted, fontSize: 11 }}>•</Text>
 
             <Pressable
               onPress={() => {
@@ -538,13 +765,34 @@ export const PaywallScreen: React.FC = () => {
             >
               <Text
                 style={{
-                  fontSize: tokens.moderateScale(12),
+                  fontSize: tokens.moderateScale(11),
                   color: colors.primaryText,
                   textDecorationLine: 'underline',
                   fontWeight: tokens.typography.fontWeight.medium,
                 }}
               >
                 {t.auth.privacyPolicy}
+              </Text>
+            </Pressable>
+
+            <Text style={{ color: colors.muted, fontSize: 11 }}>•</Text>
+
+            <Pressable
+              onPress={() => {
+                setLegalModalTab('sales_terms');
+                setLegalModalVisible(true);
+              }}
+              hitSlop={8}
+            >
+              <Text
+                style={{
+                  fontSize: tokens.moderateScale(11),
+                  color: colors.primaryText,
+                  textDecorationLine: 'underline',
+                  fontWeight: tokens.typography.fontWeight.medium,
+                }}
+              >
+                {t.paywall.distanceSalesTab}
               </Text>
             </Pressable>
           </View>
@@ -557,6 +805,8 @@ export const PaywallScreen: React.FC = () => {
         initialTab={legalModalTab}
         onClose={() => setLegalModalVisible(false)}
       />
+
+      <AppModal {...modalProps} />
     </SafeAreaView>
   );
 };

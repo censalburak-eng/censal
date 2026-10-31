@@ -1,45 +1,66 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useAppSettings } from "@/hooks/useSettings";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { SparklesIcon, LockIcon, UnlockIcon, RefreshCwIcon, SaveIcon, CheckCircle2Icon } from "lucide-react";
+import { SparklesIcon, LockIcon, UnlockIcon, RefreshCwIcon, TagIcon, ArrowRightIcon, SaveIcon, DollarSignIcon } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
+import { useAdminTab } from "@/context/AdminTabContext";
 
 export function SettingsTab() {
   const { settings, isLoading, isError, updateSettings, isUpdating } = useAppSettings();
+  const { setActiveTab } = useAdminTab();
 
   const [freeMode, setFreeMode] = React.useState<boolean>(false);
-  const [priceMonthly, setPriceMonthly] = React.useState<string>("99.99");
-  const [priceYearly, setPriceYearly] = React.useState<string>("999.99");
-  const [pricePin24h, setPricePin24h] = React.useState<string>("199.99");
+  const [monthlyPrice, setMonthlyPrice] = React.useState<string>("");
+  const [yearlyPrice, setYearlyPrice] = React.useState<string>("");
+  const [pinPrice, setPinPrice] = React.useState<string>("");
 
   React.useEffect(() => {
     if (settings) {
       setFreeMode(Boolean(settings.free_mode));
-      setPriceMonthly(String(settings.price_monthly ?? "99.99"));
-      setPriceYearly(String(settings.price_yearly ?? "999.99"));
-      setPricePin24h(String(settings.price_pin_24h ?? "199.99"));
+      setMonthlyPrice(settings.price_monthly !== undefined ? String(settings.price_monthly) : "");
+      setYearlyPrice(settings.price_yearly !== undefined ? String(settings.price_yearly) : "");
+      setPinPrice(settings.price_pin_24h !== undefined ? String(settings.price_pin_24h) : "");
     }
   }, [settings]);
-
-  const handleSavePrices = (e: React.FormEvent) => {
-    e.preventDefault();
-    updateSettings({
-      price_monthly: parseFloat(priceMonthly) || 99.99,
-      price_yearly: parseFloat(priceYearly) || 999.99,
-      price_pin_24h: parseFloat(pricePin24h) || 199.99,
-    });
-  };
 
   const handleToggleFreeMode = (checked: boolean) => {
     setFreeMode(checked);
     updateSettings({
       free_mode: checked,
+    });
+  };
+
+  const handleSavePrices = (e: React.FormEvent) => {
+    e.preventDefault();
+    const pMonthly = parseFloat(monthlyPrice.replace(",", "."));
+    const pYearly = parseFloat(yearlyPrice.replace(",", "."));
+    const pPin = parseFloat(pinPrice.replace(",", "."));
+
+    if (isNaN(pMonthly) || pMonthly <= 0) {
+      toast.error("Lütfen geçerli bir aylık abonelik fiyatı girin.");
+      return;
+    }
+    if (isNaN(pYearly) || pYearly <= 0) {
+      toast.error("Lütfen geçerli bir yıllık abonelik fiyatı girin.");
+      return;
+    }
+    if (isNaN(pPin) || pPin <= 0) {
+      toast.error("Lütfen geçerli bir sabitleme fiyatı girin.");
+      return;
+    }
+
+    updateSettings({
+      price_monthly: pMonthly,
+      price_yearly: pYearly,
+      price_pin_24h: pPin,
     });
   };
 
@@ -68,7 +89,7 @@ export function SettingsTab() {
           <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-4">
             <div className="space-y-1 pr-4">
               <div className="flex items-center gap-2">
-                <CardTitle className="text-lg">1. Ücretsiz Mod Anahtarı (Free Mode)</CardTitle>
+                <CardTitle className="text-lg">Ücretsiz Mod Anahtarı (Free Mode)</CardTitle>
               </div>
               <CardDescription className="text-sm">
                 Tek tıkla tüm 81 şehir odasının abonelik kilitlerini açın veya yeniden ücretli moda alın.
@@ -116,93 +137,34 @@ export function SettingsTab() {
           </CardContent>
         </Card>
 
-        {/* 2. Dinamik Fiyat Yönetimi */}
+        {/* 2. Google Play Fiyatları Yönlendirme Kartı */}
         <Card className="border transition-all duration-200">
-          <form onSubmit={handleSavePrices}>
-            <CardHeader className="pb-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-lg">2. Dinamik Fiyat Yönetimi</CardTitle>
-                  <CardDescription className="text-sm">
-                    Mobil uygulamadaki abonelik ve sabitleme ücretlerini panelden anlık güncelleyin.
-                  </CardDescription>
-                </div>
-              </div>
-            </CardHeader>
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <TagIcon className="size-5 text-primary" />
+              Ürün & Abonelik Fiyatları
+            </CardTitle>
+            <CardDescription className="text-sm">
+              Fiyatlandırmalar doğrudan Google Play Developer API üzerinden senkronize edilmektedir.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Abonelik ve tek seferlik sabitleme ücretlerini değiştirmek, fiyat artışı simülasyonu yapmak ve mevcut abonelere fiyat geçişi uygulamak için <strong>Google Play Fiyatları</strong> sekmesini kullanabilirsiniz.
+            </p>
 
-            <CardContent className="space-y-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="price-monthly" className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Aylık Abonelik Fiyatı
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="price-monthly"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={priceMonthly}
-                    onChange={(e) => setPriceMonthly(e.target.value)}
-                    className="font-mono text-base pe-16"
-                    placeholder="99.99"
-                    required
-                  />
-                  <span className="absolute end-3 top-2.5 text-xs text-muted-foreground font-semibold">₺ / Ay</span>
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="price-yearly" className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Yıllık Abonelik Fiyatı
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="price-yearly"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={priceYearly}
-                    onChange={(e) => setPriceYearly(e.target.value)}
-                    className="font-mono text-base pe-16"
-                    placeholder="999.99"
-                    required
-                  />
-                  <span className="absolute end-3 top-2.5 text-xs text-muted-foreground font-semibold">₺ / Yıl</span>
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="price-pin" className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  24 Saatlik Sabitleme Ücreti (Oda Vitrini)
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="price-pin"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={pricePin24h}
-                    onChange={(e) => setPricePin24h(e.target.value)}
-                    className="font-mono text-base pe-20"
-                    placeholder="199.99"
-                    required
-                  />
-                  <span className="absolute end-3 top-2.5 text-xs text-muted-foreground font-semibold">₺ / 24 Saat</span>
-                </div>
-              </div>
-            </CardContent>
-
-            <CardFooter className="pt-2 flex justify-end border-t bg-muted/20">
-              <Button type="submit" disabled={isUpdating} className="gap-2">
-                {isUpdating ? (
-                  <RefreshCwIcon className="size-4 animate-spin" />
-                ) : (
-                  <SaveIcon className="size-4" />
-                )}
-                Fiyatları Kaydet
-              </Button>
-            </CardFooter>
-          </form>
+            <Button
+              variant="outline"
+              className="w-full gap-2 justify-between cursor-pointer"
+              onClick={() => setActiveTab("pricing")}
+            >
+              <span className="flex items-center gap-2">
+                <TagIcon className="size-4 text-primary" />
+                Google Play Fiyat Yönetimine Git
+              </span>
+              <ArrowRightIcon className="size-4" />
+            </Button>
+          </CardContent>
         </Card>
       </div>
     </div>

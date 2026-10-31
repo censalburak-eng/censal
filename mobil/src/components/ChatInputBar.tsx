@@ -28,6 +28,8 @@ type ChatInputBarProps = {
   placeholder?: string;
 };
 
+type AttachType = "image" | "audio" | "location";
+
 const ChatInputBarComponent: React.FC<ChatInputBarProps> = ({
   replyingTo,
   onCancelReply,
@@ -55,12 +57,24 @@ const ChatInputBarComponent: React.FC<ChatInputBarProps> = ({
   const item3Anim = useRef(new Animated.Value(0)).current;
   const [isAttachMenuMounted, setIsAttachMenuMounted] = useState(false);
 
+  const menuBg = isDark ? colors.surfaceElevated ?? "#1F2937" : "#FFFFFF";
+  const menuBorder = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)";
+
   useEffect(() => {
     if (showAttachMenu) {
       setIsAttachMenuMounted(true);
       item1Anim.setValue(0);
       item2Anim.setValue(0);
       item3Anim.setValue(0);
+
+      const itemSpring = (v: Animated.Value) =>
+        Animated.spring(v, {
+          toValue: 1,
+          damping: 13,
+          stiffness: 260,
+          mass: 0.6,
+          useNativeDriver: true,
+        });
 
       Animated.parallel([
         Animated.spring(attachMenuAnim, {
@@ -70,29 +84,7 @@ const ChatInputBarComponent: React.FC<ChatInputBarProps> = ({
           mass: 0.7,
           useNativeDriver: true,
         }),
-        Animated.stagger(45, [
-          Animated.spring(item1Anim, {
-            toValue: 1,
-            damping: 13,
-            stiffness: 260,
-            mass: 0.6,
-            useNativeDriver: true,
-          }),
-          Animated.spring(item2Anim, {
-            toValue: 1,
-            damping: 13,
-            stiffness: 260,
-            mass: 0.6,
-            useNativeDriver: true,
-          }),
-          Animated.spring(item3Anim, {
-            toValue: 1,
-            damping: 13,
-            stiffness: 260,
-            mass: 0.6,
-            useNativeDriver: true,
-          }),
-        ]),
+        Animated.stagger(45, [itemSpring(item1Anim), itemSpring(item2Anim), itemSpring(item3Anim)]),
       ]).start();
     } else {
       Animated.parallel([
@@ -101,21 +93,9 @@ const ChatInputBarComponent: React.FC<ChatInputBarProps> = ({
           duration: 140,
           useNativeDriver: true,
         }),
-        Animated.timing(item1Anim, {
-          toValue: 0,
-          duration: 110,
-          useNativeDriver: true,
-        }),
-        Animated.timing(item2Anim, {
-          toValue: 0,
-          duration: 110,
-          useNativeDriver: true,
-        }),
-        Animated.timing(item3Anim, {
-          toValue: 0,
-          duration: 110,
-          useNativeDriver: true,
-        }),
+        Animated.timing(item1Anim, { toValue: 0, duration: 110, useNativeDriver: true }),
+        Animated.timing(item2Anim, { toValue: 0, duration: 110, useNativeDriver: true }),
+        Animated.timing(item3Anim, { toValue: 0, duration: 110, useNativeDriver: true }),
       ]).start(({ finished }) => {
         if (finished) {
           setIsAttachMenuMounted(false);
@@ -125,15 +105,19 @@ const ChatInputBarComponent: React.FC<ChatInputBarProps> = ({
   }, [showAttachMenu]);
 
   useEffect(() => {
-    const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
-    const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+    const onShow = () => setIsKeyboardVisible(true);
+    const onHide = () => setIsKeyboardVisible(false);
 
-    const showSub = Keyboard.addListener(showEvent, () => setIsKeyboardVisible(true));
-    const hideSub = Keyboard.addListener(hideEvent, () => setIsKeyboardVisible(false));
+    const sub1 = Keyboard.addListener("keyboardWillShow", onShow);
+    const sub2 = Keyboard.addListener("keyboardDidShow", onShow);
+    const sub3 = Keyboard.addListener("keyboardWillHide", onHide);
+    const sub4 = Keyboard.addListener("keyboardDidHide", onHide);
 
     return () => {
-      showSub.remove();
-      hideSub.remove();
+      sub1.remove();
+      sub2.remove();
+      sub3.remove();
+      sub4.remove();
     };
   }, []);
 
@@ -162,7 +146,8 @@ const ChatInputBarComponent: React.FC<ChatInputBarProps> = ({
     setText("");
   };
 
-  const handleAttachAction = (type: "image" | "audio" | "location") => {
+  const handleAttachAction = (type: AttachType) => {
+    Keyboard.dismiss();
     setShowAttachMenu(false);
     if (type === "image") {
       setShowMediaPicker(true);
@@ -173,6 +158,76 @@ const ChatInputBarComponent: React.FC<ChatInputBarProps> = ({
     }
   };
 
+  const toggleAttachMenu = () => {
+    Keyboard.dismiss();
+    setShowAttachMenu((prev) => !prev);
+  };
+
+  const renderAttachItem = (
+    anim: Animated.Value,
+    type: AttachType,
+    icon: keyof typeof Ionicons.glyphMap,
+    color: string,
+    label: string
+  ) => (
+    <Animated.View
+      style={{
+        alignItems: "center",
+        opacity: anim,
+        transform: [
+          {
+            translateY: anim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [22, 0],
+            }),
+          },
+          {
+            scale: anim.interpolate({
+              inputRange: [0, 0.7, 1],
+              outputRange: [0.3, 1.12, 1],
+            }),
+          },
+        ],
+      }}
+    >
+      <Pressable
+        style={({ pressed }) => [
+          { alignItems: "center", gap: 6 },
+          pressed && { transform: [{ scale: 0.88 }], opacity: 0.85 },
+        ]}
+        onPress={() => handleAttachAction(type)}
+      >
+        <View
+          style={{
+            width: tokens.scale(50),
+            height: tokens.scale(50),
+            borderRadius: tokens.scale(25),
+            backgroundColor: color,
+            justifyContent: "center",
+            alignItems: "center",
+            shadowColor: color,
+            shadowOffset: { width: 0, height: 6 },
+            shadowOpacity: 0.35,
+            shadowRadius: 8,
+            elevation: 6,
+          }}
+        >
+          <Ionicons name={icon} size={24} color="#FFFFFF" />
+        </View>
+        <Text
+          style={{
+            color: colors.text,
+            fontSize: tokens.moderateScale(12),
+            fontWeight: "600",
+            letterSpacing: 0.2,
+          }}
+        >
+          {label}
+        </Text>
+      </Pressable>
+    </Animated.View>
+  );
+
   return (
     <>
       <View
@@ -181,11 +236,12 @@ const ChatInputBarComponent: React.FC<ChatInputBarProps> = ({
           borderTopColor: colors.border,
           backgroundColor: colors.surface,
           paddingHorizontal: tokens.scale(tokens.spacing.base),
-          paddingTop: tokens.verticalScale(tokens.spacing.xs + 2),
-          paddingBottom:
-            tokens.verticalScale(tokens.spacing.xs + 2) +
-            (isKeyboardVisible ? 0 : Math.max(insets.bottom, 0)),
-          zIndex: 10,
+          paddingTop: tokens.verticalScale(8),
+          paddingBottom: isKeyboardVisible
+            ? tokens.verticalScale(8)
+            : insets.bottom > 0
+              ? insets.bottom + tokens.verticalScale(2)
+              : tokens.verticalScale(10),
         }}
       >
         {/* Yanıtlanıyor Barı */}
@@ -225,29 +281,11 @@ const ChatInputBarComponent: React.FC<ChatInputBarProps> = ({
           </View>
         )}
 
-        {/* Ek Menüsü (Ultra Akıcı & Kademeli Animasyonlu) */}
+        {/* Ek Menüsü: absolute DEĞİL, normal akışta (input satırının hemen üstünde) */}
         {isAttachMenuMounted && (
           <Animated.View
             style={{
-              position: "absolute",
-              left: tokens.scale(tokens.spacing.base),
-              right: tokens.scale(tokens.spacing.base),
-              bottom: "100%",
-              marginBottom: tokens.verticalScale(tokens.spacing.sm) + 6,
-              flexDirection: "row",
-              justifyContent: "space-around",
-              alignItems: "center",
-              backgroundColor: isDark ? colors.surfaceElevated ?? "#1F2937" : "#FFFFFF",
-              borderRadius: tokens.moderateScale(24),
-              paddingVertical: tokens.verticalScale(14),
-              paddingHorizontal: tokens.scale(tokens.spacing.md),
-              borderWidth: 1,
-              borderColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)",
-              shadowColor: "#000",
-              shadowOffset: { width: 0, height: 8 },
-              shadowOpacity: isDark ? 0.35 : 0.12,
-              shadowRadius: 18,
-              elevation: 12,
+              marginBottom: tokens.verticalScale(8),
               opacity: attachMenuAnim,
               transform: [
                 {
@@ -265,198 +303,45 @@ const ChatInputBarComponent: React.FC<ChatInputBarProps> = ({
               ],
             }}
           >
-            {/* 1. Fotoğraf / Galeri */}
-            <Animated.View
+            <View
               style={{
+                flexDirection: "row",
+                justifyContent: "space-around",
                 alignItems: "center",
-                opacity: item1Anim,
-                transform: [
-                  {
-                    translateY: item1Anim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [22, 0],
-                    }),
-                  },
-                  {
-                    scale: item1Anim.interpolate({
-                      inputRange: [0, 0.7, 1],
-                      outputRange: [0.3, 1.12, 1],
-                    }),
-                  },
-                ],
+                backgroundColor: menuBg,
+                borderRadius: tokens.moderateScale(24),
+                paddingVertical: tokens.verticalScale(14),
+                paddingHorizontal: tokens.scale(tokens.spacing.md),
+                borderWidth: 1,
+                borderColor: menuBorder,
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 8 },
+                shadowOpacity: isDark ? 0.35 : 0.12,
+                shadowRadius: 18,
+                elevation: 8,
               }}
             >
-              <Pressable
-                style={({ pressed }) => [
-                  { alignItems: "center", gap: 6 },
-                  pressed && { transform: [{ scale: 0.88 }], opacity: 0.85 },
-                ]}
-                onPress={() => handleAttachAction("image")}
-              >
-                <View
-                  style={{
-                    width: tokens.scale(50),
-                    height: tokens.scale(50),
-                    borderRadius: tokens.scale(25),
-                    backgroundColor: "#2563EB",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    shadowColor: "#2563EB",
-                    shadowOffset: { width: 0, height: 6 },
-                    shadowOpacity: 0.35,
-                    shadowRadius: 8,
-                    elevation: 6,
-                  }}
-                >
-                  <Ionicons name="images" size={24} color="#FFFFFF" />
-                </View>
-                <Text
-                  style={{
-                    color: colors.text,
-                    fontSize: tokens.moderateScale(12),
-                    fontWeight: "600",
-                    letterSpacing: 0.2,
-                  }}
-                >
-                  {t.attach.photo}
-                </Text>
-              </Pressable>
-            </Animated.View>
+              {renderAttachItem(item1Anim, "image", "images", "#2563EB", t.attach.photo)}
+              {renderAttachItem(item2Anim, "audio", "mic", "#E11D48", t.attach.voice)}
+              {renderAttachItem(item3Anim, "location", "location", "#10B981", t.attach.location)}
+            </View>
 
-            {/* 2. Ses Kaydı */}
-            <Animated.View
-              style={{
-                alignItems: "center",
-                opacity: item2Anim,
-                transform: [
-                  {
-                    translateY: item2Anim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [22, 0],
-                    }),
-                  },
-                  {
-                    scale: item2Anim.interpolate({
-                      inputRange: [0, 0.7, 1],
-                      outputRange: [0.3, 1.12, 1],
-                    }),
-                  },
-                ],
-              }}
-            >
-              <Pressable
-                style={({ pressed }) => [
-                  { alignItems: "center", gap: 6 },
-                  pressed && { transform: [{ scale: 0.88 }], opacity: 0.85 },
-                ]}
-                onPress={() => handleAttachAction("audio")}
-              >
-                <View
-                  style={{
-                    width: tokens.scale(50),
-                    height: tokens.scale(50),
-                    borderRadius: tokens.scale(25),
-                    backgroundColor: "#E11D48",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    shadowColor: "#E11D48",
-                    shadowOffset: { width: 0, height: 6 },
-                    shadowOpacity: 0.35,
-                    shadowRadius: 8,
-                    elevation: 6,
-                  }}
-                >
-                  <Ionicons name="mic" size={24} color="#FFFFFF" />
-                </View>
-                <Text
-                  style={{
-                    color: colors.text,
-                    fontSize: tokens.moderateScale(12),
-                    fontWeight: "600",
-                    letterSpacing: 0.2,
-                  }}
-                >
-                  {t.attach.voice}
-                </Text>
-              </Pressable>
-            </Animated.View>
-
-            {/* 3. Canlı Konum */}
-            <Animated.View
-              style={{
-                alignItems: "center",
-                opacity: item3Anim,
-                transform: [
-                  {
-                    translateY: item3Anim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [22, 0],
-                    }),
-                  },
-                  {
-                    scale: item3Anim.interpolate({
-                      inputRange: [0, 0.7, 1],
-                      outputRange: [0.3, 1.12, 1],
-                    }),
-                  },
-                ],
-              }}
-            >
-              <Pressable
-                style={({ pressed }) => [
-                  { alignItems: "center", gap: 6 },
-                  pressed && { transform: [{ scale: 0.88 }], opacity: 0.85 },
-                ]}
-                onPress={() => handleAttachAction("location")}
-              >
-                <View
-                  style={{
-                    width: tokens.scale(50),
-                    height: tokens.scale(50),
-                    borderRadius: tokens.scale(25),
-                    backgroundColor: "#10B981",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    shadowColor: "#10B981",
-                    shadowOffset: { width: 0, height: 6 },
-                    shadowOpacity: 0.35,
-                    shadowRadius: 8,
-                    elevation: 6,
-                  }}
-                >
-                  <Ionicons name="location" size={24} color="#FFFFFF" />
-                </View>
-                <Text
-                  style={{
-                    color: colors.text,
-                    fontSize: tokens.moderateScale(12),
-                    fontWeight: "600",
-                    letterSpacing: 0.2,
-                  }}
-                >
-                  {t.attach.location}
-                </Text>
-              </Pressable>
-
-            </Animated.View>
+            {/* Ok ucu: + butonunun yatay merkezine hizalı */}
             <View
               pointerEvents="none"
               style={{
-                position: "absolute",
-                bottom: -7,
-                // + butonunun yatay merkezi: butonun yarısı - ucun yarısı
-                left: tokens.scale(20) - 7,
                 width: 14,
                 height: 14,
-                backgroundColor: isDark ? colors.surfaceElevated ?? "#1F2937" : "#FFFFFF",
+                marginTop: -8,
+                marginLeft: tokens.scale(20) - 7,
+                backgroundColor: menuBg,
                 borderRightWidth: 1,
                 borderBottomWidth: 1,
-                borderColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)",
+                borderColor: menuBorder,
                 transform: [{ rotate: "45deg" }],
               }}
             />
           </Animated.View>
-
         )}
 
         {/* Input ve Gönder Butonu */}
@@ -469,7 +354,7 @@ const ChatInputBarComponent: React.FC<ChatInputBarProps> = ({
         >
           <Pressable
             hitSlop={8}
-            onPress={() => setShowAttachMenu((prev) => !prev)}
+            onPress={toggleAttachMenu}
             style={({ pressed }) => [
               {
                 width: tokens.scale(40),
@@ -598,4 +483,3 @@ const ChatInputBarComponent: React.FC<ChatInputBarProps> = ({
 };
 
 export const ChatInputBar = React.memo(ChatInputBarComponent);
-

@@ -37,6 +37,7 @@ import { useTheme } from '../theme';
 import { tokens } from '../theme/tokens';
 import { useI18n } from '../i18n';
 import { fetchCallablePhone } from '@/api/messagesApi';
+import { requestNotificationPermissionAsync } from '../lib/notifications';
 
 type DirectChatScreenProps = {
   conversationId: string;
@@ -48,7 +49,7 @@ export const DirectChatScreen: React.FC<DirectChatScreenProps> = ({ conversation
   const router = useRouter();
   const { user } = useAuth();
   const { colors, isDark } = useTheme();
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const { show: showModal, hide: hideModal, modalProps } = useModal();
   const insets = useSafeAreaInsets();
 
@@ -131,6 +132,9 @@ export const DirectChatScreen: React.FC<DirectChatScreenProps> = ({ conversation
   // ─── Mesaj Gönder: Metin ─────────────────────────────────
   const handleSendText = (text: string) => {
     if (!text.trim() || !user?.id) return;
+
+    // Karşı taraftan gelecek yanıtların anlık bildirilebilmesi için izin kontrolü
+    requestNotificationPermissionAsync(user.id, language);
 
     sendMutation.mutate(
       {

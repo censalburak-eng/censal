@@ -73,7 +73,7 @@ export const PinListingSheet: React.FC<PinListingSheetProps> = ({
   const limit = maxPins > 0 ? maxPins : 3;
   const isFull = activeCount >= limit;
   const remaining = Math.max(0, limit - activeCount);
-  const priceLabel = price ?? '199,99 ₺';
+  const priceLabel = price ?? '300,00 ₺';
   const rowDirection = isRTL ? 'row-reverse' : 'row';
   const textAlign = isRTL ? 'right' : 'left';
 

@@ -3,11 +3,13 @@
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import type { AdminTab } from "@/components/app-sidebar"
+import { useAdminTab } from "@/context/AdminTabContext"
 import { Badge } from "@/components/ui/badge"
 
 const titles: Record<AdminTab, string> = {
   overview: "Genel Bakış & Ciro Özeti",
-  settings: "1. Genel Ayarlar & 2. Dinamik Fiyat Yönetimi",
+  settings: "Genel Sistem Ayarları (Ücretsiz Mod)",
+  pricing: "Google Play Fiyat Yönetimi",
   quotas: "3. Oda Bazlı Sabit İlan Kontenjan Yönetimi",
   users: "4. Kullanıcı Yönetimi & Üye İşlemleri",
   payments: "5. Ödeme ve Ciro Takip Paneli",
@@ -18,7 +20,14 @@ const titles: Record<AdminTab, string> = {
 import { Button } from "@/components/ui/button"
 import { LogOut } from "lucide-react"
 
-export function SiteHeader({ activeTab = "overview" }: { activeTab?: AdminTab }) {
+export function SiteHeader({ activeTab: propActiveTab }: { activeTab?: AdminTab }) {
+  let activeTab: AdminTab = propActiveTab || "overview"
+  try {
+    const tabContext = useAdminTab()
+    activeTab = tabContext.activeTab
+  } catch {
+    // Context dışındaysa fallback
+  }
   return (
     <header className="flex h-(--header-height) shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height) px-4 lg:px-6">
       <div className="flex w-full items-center justify-between">
@@ -29,9 +38,7 @@ export function SiteHeader({ activeTab = "overview" }: { activeTab?: AdminTab })
         </div>
 
         <div className="flex items-center gap-3">
-          <Badge variant="outline" className="text-xs bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
-            Canlı Bağlantı
-          </Badge>
+
           <Button
             variant="ghost"
             size="sm"

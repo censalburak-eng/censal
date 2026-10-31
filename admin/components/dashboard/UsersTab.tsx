@@ -30,8 +30,16 @@ import {
 
 export function UsersTab() {
   const [searchTerm, setSearchTerm] = React.useState("");
-  const { users, isLoading, toggleBan, isTogglingBan, grantSubscription, isGranting, extendSubscription, isExtending } =
-    useUsers(searchTerm);
+  const {
+    users,
+    isLoading,
+    toggleBan,
+    isTogglingBan,
+    grantSubscription,
+    isGranting,
+    extendSubscription,
+    isExtending,
+  } = useUsers(searchTerm);
 
   // Dialog State for Granting Subscription
   const [grantDialogUser, setGrantDialogUser] = React.useState<AdminUser | null>(null);
@@ -41,10 +49,6 @@ export function UsersTab() {
   // Dialog State for Extending Subscription
   const [extendDialogUser, setExtendDialogUser] = React.useState<AdminUser | null>(null);
   const [extendDays, setExtendDays] = React.useState<number>(30);
-
-  // Dialog State for Banning User
-  const [banDialogUser, setBanDialogUser] = React.useState<AdminUser | null>(null);
-  const [banReason, setBanReason] = React.useState<string>("Topluluk kurallarını ihlal");
 
   const handleOpenGrant = (user: AdminUser) => {
     setGrantDialogUser(user);
@@ -76,6 +80,10 @@ export function UsersTab() {
     setExtendDialogUser(null);
   };
 
+  // Dialog State for Banning User
+  const [banDialogUser, setBanDialogUser] = React.useState<AdminUser | null>(null);
+  const [banReason, setBanReason] = React.useState<string>("Topluluk kurallarını ihlal");
+
   const handleBanClick = (user: AdminUser) => {
     if (user.is_banned) {
       // Unban directly
@@ -103,7 +111,7 @@ export function UsersTab() {
           <div>
             <CardTitle className="text-xl">4. Kullanıcı Yönetimi</CardTitle>
             <CardDescription>
-              Üye arama, hesap banlama/kaldırma, manuel abonelik tanımlama ve abonelik süresi uzatma işlemleri.
+              Üye arama ve hesap banlama / kaldırma işlemleri.
             </CardDescription>
           </div>
           <div className="relative w-full md:w-80">

@@ -28,7 +28,7 @@ export const BlockedUsersScreen: React.FC = () => {
 
 
   const handleUnblock = (user: BlockedUser) => {
-    const fullName = `${user.first_name ?? t.common.fellowCitizen} ${user.last_name ?? ''}`.trim();
+    const fullName = `${user.first_name ?? t.common.user} ${user.last_name ?? ''}`.trim();
     showModal({
       title: t.direct.unblock,
       message: t.directChat.unblockConfirm(fullName),

@@ -4,9 +4,11 @@ export function makeQueryClient() {
   return new QueryClient({
     defaultOptions: {
       queries: {
-        staleTime: 30_000,
+        staleTime: 1000 * 60 * 5, // 5 dakika (sekmeler arası geçişte anında önbellekten göster)
+        gcTime: 1000 * 60 * 30, // 30 dakika önbellekte tut
         retry: 1,
         refetchOnWindowFocus: false,
+        refetchOnMount: false,
       },
     },
   });

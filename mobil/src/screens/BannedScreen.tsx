@@ -21,6 +21,7 @@ import { useI18n } from '../i18n';
 import { supabase } from '../lib/supabase';
 import { AppModal } from '../components/ui';
 import { useModal } from '../hooks/useModal';
+import { SupportContactModal } from '../components/SupportContactModal';
 
 export const BannedScreen: React.FC = () => {
   const { user } = useAuth();
@@ -32,6 +33,7 @@ export const BannedScreen: React.FC = () => {
 
   const [message, setMessage] = useState('');
   const [successNotice, setSuccessNotice] = useState(false);
+  const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
 
   const handleSendAppeal = async () => {
     if (message.trim().length < 10) {
@@ -65,11 +67,7 @@ export const BannedScreen: React.FC = () => {
   };
 
   const handleOpenEmailSupport = () => {
-    const subject = encodeURIComponent(`Hesap Askıya Alma İtirazı - ${user?.id ?? ''}`);
-    const body = encodeURIComponent(
-      `Merhaba Şehir Odaları Yönetimi,\n\nHesabımın askıya alınmasıyla ilgili inceleme talep ediyorum.\n\nKullanıcı ID: ${user?.id ?? ''}\nAd Soyad: ${profile?.first_name ?? ''} ${profile?.last_name ?? ''}\nTelefon: ${profile?.phone ?? ''}\n\nAçıklamam:\n`
-    );
-    Linking.openURL(`mailto:destek@sehirodalari.com?subject=${subject}&body=${body}`);
+    setIsSupportModalOpen(true);
   };
 
   const handleLogout = async () => {
@@ -545,6 +543,11 @@ export const BannedScreen: React.FC = () => {
       </KeyboardAvoidingView>
 
       <AppModal {...modalProps} />
+      <SupportContactModal
+        visible={isSupportModalOpen}
+        onClose={() => setIsSupportModalOpen(false)}
+        userId={user?.id}
+      />
     </SafeAreaView>
   );
 };

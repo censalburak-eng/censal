@@ -15,13 +15,13 @@ export const logger = {
         if (isDev) console.debug(`[${scopeName}]`, ...args);
       },
       info: (...args: unknown[]) => {
-        console.info(`[${scopeName}]`, ...args);
+        if (isDev) console.info(`[${scopeName}]`, ...args);
       },
       warn: (...args: unknown[]) => {
-        console.warn(`[${scopeName}]`, ...args);
+        if (isDev) console.warn(`[${scopeName}]`, ...args);
       },
       error: (...args: unknown[]) => {
-        console.error(`[${scopeName}]`, ...args);
+        if (isDev) console.error(`[${scopeName}]`, ...args);
       },
     };
   },

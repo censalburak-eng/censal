@@ -1,5 +1,13 @@
-import React, { useEffect } from 'react';
-import { View, ActivityIndicator, Platform } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Platform } from 'react-native';
+
+// Prodüksiyonda tüm console log ve uyarılarını kapat
+if (!__DEV__) {
+  console.log = () => {};
+  console.debug = () => {};
+  console.info = () => {};
+  console.warn = () => {};
+}
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationBar } from 'expo-navigation-bar';
 import { Stack, useRouter, useSegments } from 'expo-router';
@@ -10,15 +18,35 @@ import { useProfile } from '../hooks/useProfile';
 import { ThemeProvider, useTheme } from '../theme';
 import { I18nProvider } from '../i18n';
 import { usePresenceConnection } from '../hooks/usePresence';
+import { useNotifications } from '../hooks/useNotifications';
+import { useEntitlement } from '../hooks/useEntitlement';
+import { AnimatedSplash } from '../components/AnimatedSplash';
+import { initializeRevenueCat, logoutRevenueCatUser } from '../lib/purchases';
+import { setAudioModeAsync } from 'expo-audio';
 
 function AuthNavigationGate() {
   const { user, isAuthenticated, isLoading } = useAuth();
   usePresenceConnection(user?.id);
+  useNotifications(user?.id);
   const { colors, isDark } = useTheme();
   const segments = useSegments();
   const router = useRouter();
 
   const { data: profile, isLoading: isProfileLoading } = useProfile(user?.id);
+
+  // Initialize RevenueCat SDK with the authenticated user ID
+  useEffect(() => {
+    if (user?.id) {
+      initializeRevenueCat(user.id);
+    } else {
+      initializeRevenueCat();
+    }
+  }, [user?.id]);
+
+  // iOS sessiz modda seslerin çalınabilmesi için ses modunu yapılandır
+  useEffect(() => {
+    setAudioModeAsync({ playsInSilentMode: true }).catch(() => {});
+  }, []);
 
   const hasProfile = !!profile;
   const isChecking = isLoading || (isAuthenticated && isProfileLoading);
@@ -74,11 +102,7 @@ function AuthNavigationGate() {
   }, [isChecking, isAuthenticated, hasProfile, profile?.is_banned, router, segments]);
 
   if (isChecking) {
-    return (
-      <View style={{ flex: 1, backgroundColor: colors.bg, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
+    return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
   }
 
   return (
@@ -102,8 +126,14 @@ function AuthNavigationGate() {
           name="paywall"
           options={{
             headerShown: false,
-            presentation: 'modal',
-            animation: 'slide_from_bottom',
+            animation: 'slide_from_right',
+          }}
+        />
+        <Stack.Screen
+          name="subscriptions"
+          options={{
+            headerShown: false,
+            animation: 'slide_from_right',
           }}
         />
       </Stack>
@@ -117,10 +147,29 @@ export default function RootLayout() {
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
           <I18nProvider>
-            <AuthNavigationGate />
+            <AppWithSplash />
           </I18nProvider>
         </ThemeProvider>
       </QueryClientProvider>
     </SafeAreaProvider>
+  );
+}
+
+function AppWithSplash() {
+  const [splashDone, setSplashDone] = useState(false);
+  const { user, isAuthenticated, isLoading } = useAuth();
+  const { isLoading: isProfileLoading } = useProfile(user?.id);
+  const { isLoading: isEntitlementLoading } = useEntitlement(user?.id);
+  const isReady =
+    !isLoading &&
+    !(isAuthenticated && isProfileLoading) &&
+    !(isAuthenticated && isEntitlementLoading);
+  const { colors } = useTheme();
+
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      <AuthNavigationGate />
+      {!splashDone && <AnimatedSplash isReady={isReady} onFinish={() => setSplashDone(true)} />}
+    </View>
   );
 }

@@ -39,7 +39,7 @@ export const fetchAppSettings = async (): Promise<AppSettings> => {
     free_mode: data.free_mode ?? false,
     price_monthly: String(data.price_monthly ?? '99.99'),
     price_yearly: String(data.price_yearly ?? '999.99'),
-    price_pin_24h: String(data.price_pin_24h ?? '199.99'),
+    price_pin_24h: String(data.price_pin_24h ?? '300'),
   };
 
   memorySettingsCache = settings;

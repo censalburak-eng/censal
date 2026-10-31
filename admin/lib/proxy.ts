@@ -44,15 +44,17 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse
   }
 
-  // 2. Oturum var: admins tablosundan yetki kontrolü yap
+  // 2. Oturum var: admins tablosundan yetki kontrolü yap (tek ve güvenli yetki kaynağı)
   const { data: admin } = await supabase
     .from('admins')
     .select('role')
     .eq('user_id', user.id)
     .maybeSingle()
 
+  const isAllowed = Boolean(admin)
+
   // Kullanıcı giriş yapmış ama admin değilse -> oturumu kapat ve login sayfasına hata ile gönder
-  if (!admin) {
+  if (!isAllowed) {
     if (!isLoginPage) {
       await supabase.auth.signOut()
       const url = request.nextUrl.clone()

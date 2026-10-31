@@ -57,3 +57,4 @@ Uygulamayı sildiyseniz veya erişemiyorsanız web üzerinden silme talebinde bu
 - **Silinen Veriler:** Kullanıcı ID, ad-soyad, telefon numarası (varsa), profil fotoğrafı, gönderilen tüm mesajlar, ses kayıtları ve görseller.
 - **Saklanan Veriler:** Hiçbir veri saklanmaz; silme işlemi geri alınamaz şekilde kalıcıdır.
 - **Otomatik Temizleme:** Şehir odalarında paylaşılan tüm içerikler zaten 30 gün sonra sistemden otomatik ve kalıcı olarak temizlenmektedir.
+

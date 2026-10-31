@@ -30,6 +30,9 @@ import {
   EyeIcon,
   SparklesIcon,
   ClockIcon,
+  ShieldCheckIcon,
+  ShieldAlertIcon,
+  KeyRoundIcon,
 } from "lucide-react";
 import { CITY_MAP } from "@/lib/cities";
 import type { AdminLog } from "@/api/logsApi";
@@ -50,6 +53,20 @@ function formatPhone(phone: string | null | undefined): string {
 function getActionMeta(action: string) {
   const act = action.toUpperCase();
 
+  if (act === "ADMIN_ROLE_GRANT" || act.includes("ROLE_GRANT")) {
+    return {
+      title: "Yönetici Yetkisi Verildi",
+      badgeClass: "bg-purple-600 hover:bg-purple-700 text-white",
+      icon: <ShieldCheckIcon className="size-3.5" />,
+    };
+  }
+  if (act === "ADMIN_ROLE_REVOKE" || act.includes("ROLE_REVOKE")) {
+    return {
+      title: "Yönetici Yetkisi Kaldırıldı",
+      badgeClass: "bg-slate-700 hover:bg-slate-800 text-white",
+      icon: <ShieldAlertIcon className="size-3.5" />,
+    };
+  }
   if (act === "BAN_APPEAL_APPROVED") {
     return {
       title: "İtiraz Kabul Edildi (Ban Açıldı)",
@@ -78,6 +95,13 @@ function getActionMeta(action: string) {
       icon: <ClockIcon className="size-3.5" />,
     };
   }
+  if (act === "SUBSCRIPTION_CANCEL" || act === "SUBSCRIPTION_REVOKE") {
+    return {
+      title: "Abonelik İptal Edildi",
+      badgeClass: "bg-rose-600 hover:bg-rose-700 text-white",
+      icon: <UserXIcon className="size-3.5" />,
+    };
+  }
   if (act === "QUOTA_UPDATE") {
     return {
       title: "Kontenjan Değiştirildi",
@@ -92,14 +116,14 @@ function getActionMeta(action: string) {
       icon: <SlidersHorizontalIcon className="size-3.5" />,
     };
   }
-  if (act.includes("UNBAN")) {
+  if (act === "USER_UNBAN" || act.includes("UNBAN")) {
     return {
       title: "Kullanıcı Engeli Açıldı",
       badgeClass: "bg-emerald-600 hover:bg-emerald-700 text-white",
       icon: <UserCheckIcon className="size-3.5" />,
     };
   }
-  if (act.includes("BAN")) {
+  if (act === "USER_BAN" || act.includes("BAN")) {
     return {
       title: "Kullanıcı Engellendi",
       badgeClass: "bg-rose-600 hover:bg-rose-700 text-white",
@@ -121,9 +145,15 @@ function getActionMeta(action: string) {
     };
   }
 
+  // Bilinmeyen eylemler için ham kod yerine okunabilir başlık
+  const formattedTitle = action
+    .replace(/_/g, " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+
   return {
-    title: action,
-    badgeClass: "bg-secondary text-secondary-foreground",
+    title: formattedTitle,
+    badgeClass: "bg-slate-700 text-white",
     icon: <ActivityIcon className="size-3.5" />,
   };
 }
@@ -160,6 +190,7 @@ function getTargetDisplay(log: AdminLog) {
     const fullName = [target_first_name, target_last_name].filter(Boolean).join(" ");
     const cityId = target_city_id ? Number(target_city_id) : null;
     const city = cityId && !isNaN(cityId) ? CITY_MAP.get(cityId) : null;
+    const formattedPhoneNum = formatPhone(target_phone);
 
     return (
       <div className="flex flex-col gap-0.5">
@@ -167,7 +198,9 @@ function getTargetDisplay(log: AdminLog) {
           <div className="size-5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
             <UserIcon className="size-3" />
           </div>
-          <span className="truncate max-w-[150px]">{fullName || "Kayıtlı Kullanıcı"}</span>
+          <span className="truncate max-w-[150px]">
+            {fullName || (formattedPhoneNum ? formattedPhoneNum : "Kayıtlı Kullanıcı")}
+          </span>
           {city && (
             <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 font-normal text-muted-foreground shrink-0">
               {city.name} ({city.plate})
@@ -175,8 +208,8 @@ function getTargetDisplay(log: AdminLog) {
           )}
         </div>
         <div className="flex items-center gap-2 text-xs text-muted-foreground ps-6">
-          {target_phone ? (
-            <span className="font-mono text-[11px] font-medium text-foreground/80">{formatPhone(target_phone)}</span>
+          {fullName && formattedPhoneNum ? (
+            <span className="font-mono text-[11px] font-medium text-foreground/80">{formattedPhoneNum}</span>
           ) : null}
           {target_id && (
             <span className="text-[10px] font-mono text-muted-foreground/60">
@@ -200,63 +233,90 @@ function getTargetDisplay(log: AdminLog) {
   return <span className="text-muted-foreground capitalize">{target_type || "Sistem"}</span>;
 }
 
+function shouldShowTechnicalDetails(log: AdminLog): boolean {
+  if (!log.details) return false;
+  const keys = Object.keys(log.details);
+  if (keys.length === 0) return false;
+  // Basit tek alanlı veya zaten tam açıklanan alanlar için teknik JSON butonuna gerek yok
+  const simpleKeys = ["role", "revoked", "new_limit", "previous_limit", "is_banned", "reason"];
+  if (keys.length <= 2 && keys.every((k) => simpleKeys.includes(k))) return false;
+  return true;
+}
+
 // İnsan dilinde anlaşılır işlem özeti (Detay)
 function renderHumanDetails(log: AdminLog) {
   const d = log.details;
-  if (!d) {
-    return <span className="text-muted-foreground text-xs italic">Açıklama belirtilmemiş.</span>;
+  const act = log.action.toUpperCase();
+
+  // 1. Yönetici Rolü İşlemleri
+  if (act === "ADMIN_ROLE_GRANT" || act.includes("ROLE_GRANT")) {
+    return (
+      <span className="text-xs text-foreground font-medium">
+        Kullanıcıya <strong>Sistem Yöneticisi (Admin)</strong> yetkisi verildi.
+      </span>
+    );
+  }
+  if (act === "ADMIN_ROLE_REVOKE" || act.includes("ROLE_REVOKE")) {
+    return (
+      <span className="text-xs text-foreground font-medium">
+        Kullanıcının yönetici yetkisi geri alındı (Standart kullanıcı yapıldı).
+      </span>
+    );
   }
 
-  // 1. Kontenjan Değişikliği
-  if (typeof d.new_limit === "number") {
+  // 2. Kontenjan Değişikliği
+  if (d && typeof d.new_limit === "number") {
+    const prevText = typeof d.previous_limit === "number" ? ` (Önceki: ${d.previous_limit})` : "";
     return (
       <div className="flex items-center gap-2 text-xs">
         <span className="font-medium text-foreground">
-          Sabit ilan kontenjan limiti <strong>{d.new_limit} adet</strong> olarak ayarlandı.
+          Sabit ilan kontenjan limiti <strong>{d.new_limit} adet</strong> olarak ayarlandı{prevText}.
         </span>
       </div>
     );
   }
 
-  // 2. Ayar Değişikliği
-  const parts: string[] = [];
-  if (typeof d.free_mode === "boolean") {
-    parts.push(d.free_mode ? "Ücretsiz Mod Açık (Kilitler kaldırıldı)" : "Abonelik Zorunlu Modu Devrede");
-  }
-  if (d.price_monthly) parts.push(`Aylık: ${d.price_monthly} ₺`);
-  if (d.price_yearly) parts.push(`Yıllık: ${d.price_yearly} ₺`);
-  if (d.price_pin_24h) parts.push(`Sabitleme: ${d.price_pin_24h} ₺`);
+  // 3. Ayar Değişikliği
+  if (d) {
+    const parts: string[] = [];
+    if (typeof d.free_mode === "boolean") {
+      parts.push(d.free_mode ? "Ücretsiz Mod Açık (Kilitler kaldırıldı)" : "Abonelik Zorunlu Modu Devrede");
+    }
+    if (d.price_monthly) parts.push(`Aylık: ${d.price_monthly} ₺`);
+    if (d.price_yearly) parts.push(`Yıllık: ${d.price_yearly} ₺`);
+    if (d.price_pin_24h) parts.push(`Sabitleme: ${d.price_pin_24h} ₺`);
 
-  if (parts.length > 0) {
-    return (
-      <div className="text-xs text-foreground/90 space-y-0.5">
-        <p className="font-medium">{parts.join(" · ")}</p>
-      </div>
-    );
+    if (parts.length > 0) {
+      return (
+        <div className="text-xs text-foreground/90 space-y-0.5">
+          <p className="font-medium">{parts.join(" · ")}</p>
+        </div>
+      );
+    }
   }
 
-  // 3. Ban Açtırma Talebi (İtiraz) Sonucu
-  if (d.appeal_id || log.action.includes("BAN_APPEAL")) {
-    const isApproved = log.action === "BAN_APPEAL_APPROVED";
+  // 4. Ban Açtırma Talebi (İtiraz) Sonucu
+  if (d && (d.appeal_id || act.includes("BAN_APPEAL"))) {
+    const isApproved = act === "BAN_APPEAL_APPROVED";
     return (
-      <div className="text-xs">
+      <div className="text-xs font-medium">
         {isApproved ? (
-          <span className="text-emerald-700 dark:text-emerald-400 font-medium inline-flex items-center gap-1">
+          <span className="text-emerald-700 dark:text-emerald-400 inline-flex items-center gap-1">
             <CheckCircle2Icon className="size-3.5" />
-            İtiraz onaylandı, kullanıcının banı tamamen kaldırıldı.
+            İtiraz onaylandı, kullanıcının engeli tamamen kaldırıldı.
           </span>
         ) : (
-          <span className="text-rose-700 dark:text-rose-400 font-medium inline-flex items-center gap-1">
+          <span className="text-rose-700 dark:text-rose-400 inline-flex items-center gap-1">
             <UserXIcon className="size-3.5" />
-            İtiraz reddedildi, kullanıcının yasağı devam ediyor.
+            İtiraz reddedildi, kullanıcının engeli devam ediyor.
           </span>
         )}
       </div>
     );
   }
 
-  // 4. Manuel Abonelik İşlemleri
-  if (d.plan || log.action.includes("SUBSCRIPTION")) {
+  // 5. Manuel Abonelik İşlemleri
+  if (d && (d.plan || act.includes("SUBSCRIPTION"))) {
     if (d.additional_days) {
       return (
         <span className="text-xs text-foreground font-medium">
@@ -272,9 +332,9 @@ function renderHumanDetails(log: AdminLog) {
     );
   }
 
-  // 5. Kullanıcı Banlama / Moderasyon
-  if (d.reason) {
-    const isBan = d.is_banned === true || log.action.includes("BAN");
+  // 6. Kullanıcı Banlama / Moderasyon
+  if (d && d.reason) {
+    const isBan = (d.is_banned !== false && !act.includes("UNBAN")) && (d.is_banned === true || act.includes("BAN"));
     return (
       <div className="text-xs text-foreground space-y-0.5">
         <p className="font-medium">
@@ -285,12 +345,50 @@ function renderHumanDetails(log: AdminLog) {
     );
   }
 
-  // Genel basit özet
-  return (
-    <span className="text-xs text-muted-foreground font-mono">
-      {JSON.stringify(d)}
-    </span>
-  );
+  // 7. Kullanıcı Engeli Açıldı / Kapatıldı (reason belirtilmemişse)
+  if (act.includes("UNBAN")) {
+    return (
+      <span className="text-xs text-emerald-700 dark:text-emerald-400 font-medium inline-flex items-center gap-1">
+        <UserCheckIcon className="size-3.5" />
+        Kullanıcının sisteme erişim engeli kaldırıldı.
+      </span>
+    );
+  }
+
+  if (act.includes("BAN")) {
+    return (
+      <span className="text-xs text-rose-700 dark:text-rose-400 font-medium inline-flex items-center gap-1">
+        <UserXIcon className="size-3.5" />
+        Kullanıcı sistemden engellendi.
+      </span>
+    );
+  }
+
+  // 8. İçerik / Mesaj Silme
+  if (act.includes("DELETE") || act.includes("REMOVE")) {
+    return (
+      <span className="text-xs text-muted-foreground">
+        İlgili içerik veya mesaj sistemden kalıcı olarak silindi.
+      </span>
+    );
+  }
+
+  // 9. Eğer detay yoksa veya boşsa
+  if (!d || Object.keys(d).length === 0) {
+    return <span className="text-muted-foreground text-xs italic">İşlem başarıyla tamamlandı.</span>;
+  }
+
+  // Bilinmeyen alanlar için JSON yerine okunabilir anahtar-değer metni
+  const readable = Object.entries(d)
+    .filter(([k]) => !["source", "id", "created_at"].includes(k))
+    .map(([k, v]) => `${k.replace(/_/g, " ")}: ${typeof v === "object" ? "" : String(v)}`)
+    .filter(Boolean);
+
+  if (readable.length > 0) {
+    return <span className="text-xs text-foreground/80">{readable.join(" · ")}</span>;
+  }
+
+  return <span className="text-muted-foreground text-xs italic">İşlem başarıyla kaydedildi.</span>;
 }
 
 export function LogsTab() {
@@ -500,8 +598,8 @@ export function LogsTab() {
                           <div className="space-y-1.5">
                             {renderHumanDetails(log)}
 
-                            {/* Teknik JSON Detay Butonu */}
-                            {log.details && (
+                            {/* Teknik JSON Detay Butonu (Sadece karmaşık ve ek teknik alan varsa göster) */}
+                            {log.details && shouldShowTechnicalDetails(log) && (
                               <div>
                                 <button
                                   type="button"

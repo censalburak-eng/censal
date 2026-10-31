@@ -1,28 +1,28 @@
 {
   "expo": {
     "name": "Censal",
-    "slug": "mobil",
+    "slug": "censal",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/censal-logo.png",
     "scheme": "censal",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "bundleIdentifier": "com.gargamel9288.mobil",
+      "bundleIdentifier": "com.censal.app",
       "supportsTablet": false,
       "infoPlist": {
         "NSCameraUsageDescription": "Censal, profil fotoğrafınızı güncellemek ve odalarda fotoğraf paylaşabilmeniz için kameraya erişim izni gerektirir.",
         "NSPhotoLibraryUsageDescription": "Censal, mesajlarınıza fotoğraf eklemek ve profil resminizi seçmek için fotoğraf galerinize erişim izni gerektirir.",
         "NSMicrophoneUsageDescription": "Censal, şehir odalarında ve özel sohbetlerde sesli mesaj kaydedebilmeniz için mikrofon erişimine ihtiyaç duyar.",
-        "NSLocationWhenInUseUsageDescription": "Censal, şehir odasındaki üyelerle isteğe bağlı anlık konumunuzu paylaşabilmeniz için konum erişimi gerektirir."
+        "NSLocationWhenInUseUsageDescription": "Censal, şehir odasındaki üyelerle isteğe bağlı anlık konumunuzu paylaşabilmeniz için konum erişimi gerektirir.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#050B18",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "foregroundImage": "./assets/images/android-icon-foreground.png"
       },
       "softwareKeyboardLayoutMode": "resize",
       "predictiveBackGestureEnabled": false,
@@ -33,9 +33,10 @@
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.FOREGROUND_SERVICE",
-        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+        "android.permission.POST_NOTIFICATIONS"
       ],
-      "package": "com.gargamel9288.mobil"
+      "package": "com.censal.app"
     },
     "web": {
       "output": "single",
@@ -47,8 +48,9 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#050B18",
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 100
+          "image": "./assets/images/censal-logo.png",
+          "imageWidth": 120,
+          "resizeMode": "contain"
         }
       ],
       "expo-audio",
@@ -64,6 +66,13 @@
         {
           "locationWhenInUsePermission": "Censal, şehir odalarında konum paylaşabilmeniz için konum erişimi gerektirir."
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/notification-icon.png",
+          "color": "#ffffff"
+        }
       ]
     ],
     "experiments": {
@@ -73,17 +82,14 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "5abfb017-ec97-4b05-af9f-6369eb755535"
+        "projectId": "eebd28a9-68e9-48c8-bddc-20935386b58d"
       }
     },
-    "owner": "gargamel9288",
-    "runtimeVersion": {
-      "policy": "appVersion"
-    },
+    "runtimeVersion": "1.0.0",
     "updates": {
-      "url": "https://u.expo.dev/5abfb017-ec97-4b05-af9f-6369eb755535",
       "checkAutomatically": "ON_LOAD",
       "fallbackToCacheTimeout": 0
-    }
+    },
+    "owner": "censal"
   }
 }

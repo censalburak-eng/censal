@@ -21,7 +21,8 @@ import { useI18n } from '../i18n';
 import { CITIES_DATA } from '../data/cities';
 import { AppButton } from '../components/ui';
 import { AppTextInput } from '../components/ui/AppInput';
-import { formatPhone, sanitizePhone, PHONE_MAX_DIGITS } from '../../utils/phone';
+import { formatPhone, sanitizePhone, PHONE_MAX_DIGITS } from '../utils/phone';
+import { supabase } from '../lib/supabase';
 
 export const CompleteProfileScreen: React.FC = () => {
   const { mode } = useLocalSearchParams<{ mode?: string }>();
@@ -89,6 +90,24 @@ export const CompleteProfileScreen: React.FC = () => {
       return;
     }
 
+    // Yasaklı kelime kontrolü (Ad ve Soyad)
+    try {
+      const [{ data: filteredAd }, { data: filteredSoyad }] = await Promise.all([
+        supabase.rpc('filter_banned_words', { p_text: ad.trim() }),
+        supabase.rpc('filter_banned_words', { p_text: soyad.trim() }),
+      ]);
+
+      const hasBannedAd = Boolean(filteredAd && (filteredAd !== ad.trim() || filteredAd.includes('***')));
+      const hasBannedSoyad = Boolean(filteredSoyad && (filteredSoyad !== soyad.trim() || filteredSoyad.includes('***')));
+
+      if (hasBannedAd || hasBannedSoyad) {
+        setError(t.profile.bannedWordError);
+        return;
+      }
+    } catch (filterErr) {
+      console.warn('[handleSave] Banned word check warning:', filterErr);
+    }
+
     // Hiçbir alan değişmemişse ağ isteği atma, doğrudan dön
     let isUnchanged = false;
     if (profile) {
@@ -132,6 +151,12 @@ export const CompleteProfileScreen: React.FC = () => {
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : t.profile.saveFailed;
       const errStr = String(err);
+
+      if (errMsg.includes('BANNED_WORD_NAME') || errMsg.includes('yasaklı kelime')) {
+        setError(t.profile.bannedWordError);
+        return;
+      }
+
       const isStaleAccount = ['hesabı bulunamadı', 'oturumu geçersiz', 'profiles_id_fkey', '23503'].some(
         (k) => errMsg.includes(k) || errStr.includes(k)
       );

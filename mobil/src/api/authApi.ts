@@ -5,45 +5,6 @@ import { mapAuthError, AppError } from '../lib/errors';
 
 WebBrowser.maybeCompleteAuthSession();
 
-export const sendPhoneOtp = async (phone: string): Promise<void> => {
-  const cleanedDigits = phone.replace(/[^0-9]/g, '');
-  const formattedPhone = cleanedDigits.startsWith('90')
-    ? `+${cleanedDigits}`
-    : `+90${cleanedDigits}`;
-
-  const { error } = await supabase.auth.signInWithOtp({
-    phone: formattedPhone,
-  });
-
-  if (error) {
-    throw mapAuthError(error);
-  }
-};
-
-export const verifyPhoneOtp = async (
-  phone: string,
-  token: string
-): Promise<{ user: unknown; session: unknown }> => {
-  const cleanedDigits = phone.replace(/[^0-9]/g, '');
-  const formattedPhone = cleanedDigits.startsWith('90')
-    ? `+${cleanedDigits}`
-    : `+90${cleanedDigits}`;
-
-  const { data, error } = await supabase.auth.verifyOtp({
-    phone: formattedPhone,
-    token,
-    type: 'sms',
-  });
-
-  if (error) {
-    throw mapAuthError(error);
-  }
-
-  return {
-    user: data.user,
-    session: data.session,
-  };
-};
 
 export const getCurrentUser = async () => {
   const { data, error } = await supabase.auth.getUser();
@@ -124,6 +85,63 @@ export const signInWithGoogleOAuth = async (): Promise<{ user: unknown; session:
   }
 
   throw new AppError('UNKNOWN', 'Google ile giriş tamamlanamadı');
+};
+
+export const signInWithEmail = async (
+  email: string,
+  password: string
+): Promise<{ user: unknown; session: unknown }> => {
+  const cleanEmail = email.trim().toLowerCase();
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: cleanEmail,
+    password,
+  });
+
+  if (error) {
+    throw mapAuthError(error);
+  }
+
+  return {
+    user: data.user,
+    session: data.session,
+  };
+};
+
+export const signUpWithEmail = async (
+  email: string,
+  password: string
+): Promise<{ user: unknown; session: unknown }> => {
+  const cleanEmail = email.trim().toLowerCase();
+  const { data, error } = await supabase.auth.signUp({
+    email: cleanEmail,
+    password,
+  });
+
+  if (error) {
+    throw mapAuthError(error);
+  }
+
+  if (!data.session && data.user) {
+    try {
+      const loginRes = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password,
+      });
+      if (loginRes.data.session) {
+        return {
+          user: loginRes.data.user,
+          session: loginRes.data.session,
+        };
+      }
+    } catch {
+      // noop
+    }
+  }
+
+  return {
+    user: data.user,
+    session: data.session,
+  };
 };
 
 export const signInWithSocialMock = async (
