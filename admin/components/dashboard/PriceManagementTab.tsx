@@ -324,35 +324,22 @@ export function PriceManagementTab() {
               </p>
             </div>
           ) : (
-            <div className="rounded-xl border overflow-hidden shadow-xs">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead className="w-[280px]">Ürün / Paket</TableHead>
-                    <TableHead className="w-[120px]">Tür</TableHead>
-                    <TableHead className="w-[140px]">Taban Plan</TableHead>
-                    <TableHead className="w-[130px]">Mevcut Fiyat (TR)</TableHead>
-                    <TableHead className="w-[160px]">Yeni Fiyat (₺)</TableHead>
-                    <TableHead className="text-end">İşlemler</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredProducts.map((p) => {
-                    const enteredPrice = getEnteredPrice(p);
-                    const isAllowed = p.allowed;
+            <div className="space-y-4">
+              {/* Mobil Ürün Kart Listesi (md:hidden) */}
+              <div className="grid grid-cols-1 gap-3 md:hidden">
+                {filteredProducts.map((p) => {
+                  const enteredPrice = getEnteredPrice(p);
+                  const isAllowed = p.allowed;
 
-                    return (
-                      <TableRow key={`${p.productId}-${p.basePlanId || "default"}`} className="hover:bg-muted/20">
-                        {/* Ürün Başlığı & ID */}
-                        <TableCell>
-                          <div className="flex flex-col gap-0.5">
-                            <span className="font-semibold text-foreground text-sm">{p.title}</span>
-                            <span className="font-mono text-xs text-muted-foreground">#{p.productId}</span>
-                          </div>
-                        </TableCell>
-
-                        {/* Tür */}
-                        <TableCell>
+                  return (
+                    <div key={`${p.productId}-${p.basePlanId || "default"}`} className="rounded-xl border p-4 bg-card/60 space-y-3 shadow-xs">
+                      {/* Başlık & Tür */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <span className="font-semibold text-foreground text-sm block truncate">{p.title}</span>
+                          <span className="font-mono text-xs text-muted-foreground block truncate">#{p.productId}</span>
+                        </div>
+                        <div className="shrink-0">
                           {p.type === "subscription" ? (
                             <Badge variant="outline" className="bg-indigo-500/10 text-indigo-600 border-indigo-500/30 text-xs gap-1 font-medium">
                               <SparklesIcon className="size-3" />
@@ -364,25 +351,31 @@ export function PriceManagementTab() {
                               Tek Seferlik
                             </Badge>
                           )}
-                        </TableCell>
+                        </div>
+                      </div>
 
-                        {/* Taban Plan */}
-                        <TableCell>
-                          <span className="font-mono text-xs text-foreground/80">
-                            {p.basePlanId || <span className="text-muted-foreground italic">-</span>}
+                      {/* Taban Plan & Mevcut Fiyat */}
+                      <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t">
+                        <div>
+                          <span className="text-muted-foreground block text-[11px]">Taban Plan</span>
+                          <span className="font-mono text-foreground font-medium text-xs pt-0.5 block truncate">
+                            {p.basePlanId || "-"}
                           </span>
-                        </TableCell>
+                        </div>
 
-                        {/* Mevcut Fiyat */}
-                        <TableCell>
-                          <span className="text-sm font-semibold text-foreground">
-                            {p.currentPrice !== null ? `${p.currentPrice.toFixed(2)} ₺` : <span className="text-muted-foreground text-xs italic">Tanımsız</span>}
+                        <div>
+                          <span className="text-muted-foreground block text-[11px]">Mevcut Fiyat (TR)</span>
+                          <span className="font-semibold text-foreground text-sm pt-0.5 block">
+                            {p.currentPrice !== null ? `${p.currentPrice.toFixed(2)} ₺` : "Tanımsız"}
                           </span>
-                        </TableCell>
+                        </div>
+                      </div>
 
-                        {/* Yeni Fiyat Input */}
-                        <TableCell>
-                          <div className="relative max-w-[130px]">
+                      {/* Yeni Fiyat & Butonlar */}
+                      <div className="pt-2 border-t space-y-2">
+                        <div className="flex items-center gap-2">
+                          <label className="text-xs font-medium text-muted-foreground shrink-0">Yeni Fiyat:</label>
+                          <div className="relative flex-1">
                             <Input
                               type="text"
                               inputMode="decimal"
@@ -390,49 +383,158 @@ export function PriceManagementTab() {
                               value={priceInputs[p.productId] ?? ""}
                               onChange={(e) => handlePriceInputChange(p.productId, e.target.value)}
                               disabled={!isAllowed || isUpdating}
-                              className="pe-7 h-8 text-xs font-mono"
+                              className="pe-7 h-9 text-xs font-mono w-full"
                             />
-                            <span className="absolute end-2 top-2 text-xs font-semibold text-muted-foreground">₺</span>
+                            <span className="absolute end-2.5 top-2.5 text-xs font-semibold text-muted-foreground">₺</span>
                           </div>
-                        </TableCell>
+                        </div>
 
-                        {/* İşlem Butonları */}
-                        <TableCell className="text-end">
-                          <div className="flex items-center justify-end gap-2">
-                            {!isAllowed ? (
-                              <Badge variant="secondary" className="text-xs font-normal">
-                                Değişiklik İzni Yok
+                        <div className="flex items-center gap-2 pt-1">
+                          {!isAllowed ? (
+                            <Badge variant="secondary" className="text-xs font-normal w-full py-1.5 justify-center">
+                              Değişiklik İzni Yok
+                            </Badge>
+                          ) : (
+                            <>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-9 text-xs gap-1 flex-1"
+                                onClick={() => handleDryRun(p)}
+                                disabled={!enteredPrice || isUpdating}
+                              >
+                                <EyeIcon className="size-3.5" />
+                                Önizle
+                              </Button>
+                              <Button
+                                variant="default"
+                                size="sm"
+                                className="h-9 text-xs gap-1 bg-primary hover:bg-primary/90 text-primary-foreground flex-1"
+                                onClick={() => handleOpenConfirm(p)}
+                                disabled={!enteredPrice || isUpdating}
+                              >
+                                Uygula
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Masaüstü Tablo Görünümü (hidden md:block) */}
+              <div className="hidden md:block rounded-xl border overflow-x-auto shadow-xs">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      <TableHead className="w-[280px]">Ürün / Paket</TableHead>
+                      <TableHead className="w-[120px]">Tür</TableHead>
+                      <TableHead className="w-[140px]">Taban Plan</TableHead>
+                      <TableHead className="w-[130px]">Mevcut Fiyat (TR)</TableHead>
+                      <TableHead className="w-[160px]">Yeni Fiyat (₺)</TableHead>
+                      <TableHead className="text-end">İşlemler</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredProducts.map((p) => {
+                      const enteredPrice = getEnteredPrice(p);
+                      const isAllowed = p.allowed;
+
+                      return (
+                        <TableRow key={`${p.productId}-${p.basePlanId || "default"}`} className="hover:bg-muted/20">
+                          {/* Ürün Başlığı & ID */}
+                          <TableCell>
+                            <div className="flex flex-col gap-0.5">
+                              <span className="font-semibold text-foreground text-sm">{p.title}</span>
+                              <span className="font-mono text-xs text-muted-foreground">#{p.productId}</span>
+                            </div>
+                          </TableCell>
+
+                          {/* Tür */}
+                          <TableCell>
+                            {p.type === "subscription" ? (
+                              <Badge variant="outline" className="bg-indigo-500/10 text-indigo-600 border-indigo-500/30 text-xs gap-1 font-medium">
+                                <SparklesIcon className="size-3" />
+                                Abonelik
                               </Badge>
                             ) : (
-                              <>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-8 text-xs gap-1"
-                                  onClick={() => handleDryRun(p)}
-                                  disabled={!enteredPrice || isUpdating}
-                                >
-                                  <EyeIcon className="size-3" />
-                                  Önizle
-                                </Button>
-                                <Button
-                                  variant="default"
-                                  size="sm"
-                                  className="h-8 text-xs gap-1 bg-primary hover:bg-primary/90 text-primary-foreground"
-                                  onClick={() => handleOpenConfirm(p)}
-                                  disabled={!enteredPrice || isUpdating}
-                                >
-                                  Uygula
-                                </Button>
-                              </>
+                              <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 text-xs gap-1 font-medium">
+                                <ShoppingBagIcon className="size-3" />
+                                Tek Seferlik
+                              </Badge>
                             )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+                          </TableCell>
+
+                          {/* Taban Plan */}
+                          <TableCell>
+                            <span className="font-mono text-xs text-foreground/80">
+                              {p.basePlanId || <span className="text-muted-foreground italic">-</span>}
+                            </span>
+                          </TableCell>
+
+                          {/* Mevcut Fiyat */}
+                          <TableCell>
+                            <span className="text-sm font-semibold text-foreground">
+                              {p.currentPrice !== null ? `${p.currentPrice.toFixed(2)} ₺` : <span className="text-muted-foreground text-xs italic">Tanımsız</span>}
+                            </span>
+                          </TableCell>
+
+                          {/* Yeni Fiyat Input */}
+                          <TableCell>
+                            <div className="relative max-w-[130px]">
+                              <Input
+                                type="text"
+                                inputMode="decimal"
+                                placeholder={p.currentPrice ? p.currentPrice.toString() : "0.00"}
+                                value={priceInputs[p.productId] ?? ""}
+                                onChange={(e) => handlePriceInputChange(p.productId, e.target.value)}
+                                disabled={!isAllowed || isUpdating}
+                                className="pe-7 h-8 text-xs font-mono"
+                              />
+                              <span className="absolute end-2 top-2 text-xs font-semibold text-muted-foreground">₺</span>
+                            </div>
+                          </TableCell>
+
+                          {/* İşlem Butonları */}
+                          <TableCell className="text-end">
+                            <div className="flex items-center justify-end gap-2">
+                              {!isAllowed ? (
+                                <Badge variant="secondary" className="text-xs font-normal">
+                                  Değişiklik İzni Yok
+                                </Badge>
+                              ) : (
+                                <>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 text-xs gap-1"
+                                    onClick={() => handleDryRun(p)}
+                                    disabled={!enteredPrice || isUpdating}
+                                  >
+                                    <EyeIcon className="size-3" />
+                                    Önizle
+                                  </Button>
+                                  <Button
+                                    variant="default"
+                                    size="sm"
+                                    className="h-8 text-xs gap-1 bg-primary hover:bg-primary/90 text-primary-foreground"
+                                    onClick={() => handleOpenConfirm(p)}
+                                    disabled={!enteredPrice || isUpdating}
+                                  >
+                                    Uygula
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
           )}
         </CardContent>
@@ -579,47 +681,26 @@ export function PriceManagementTab() {
               Henüz kayıtlı bir fiyat değişikliği bulunmuyor.
             </div>
           ) : (
-            <div className="rounded-lg border overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/40 text-xs">
-                    <TableHead className="w-[140px]">Tarih / Saat</TableHead>
-                    <TableHead className="w-[180px]">Ürün ID</TableHead>
-                    <TableHead className="w-[100px]">Tür</TableHead>
-                    <TableHead className="w-[160px]">Fiyat Değişimi</TableHead>
-                    <TableHead className="w-[130px]">Mevcut Aboneler</TableHead>
-                    <TableHead className="w-[120px]">Durum</TableHead>
-                    <TableHead>Açıklama / Hata</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {logs.map((log) => {
-                    const isSuccess = log.status === "success";
-                    const isDryRun = log.status === "dry_run";
+            <div className="space-y-4">
+              {/* Mobil Fiyat Log Kart Listesi (md:hidden) */}
+              <div className="grid grid-cols-1 gap-3 md:hidden">
+                {logs.map((log) => {
+                  const isSuccess = log.status === "success";
+                  const isDryRun = log.status === "dry_run";
 
-                    return (
-                      <TableRow key={log.id} className="text-xs hover:bg-muted/10">
-                        <TableCell className="font-medium whitespace-nowrap text-muted-foreground">
-                          {formatDate(log.created_at)}
-                        </TableCell>
-                        <TableCell className="font-mono font-medium text-foreground">
-                          {log.product_id}
-                        </TableCell>
-                        <TableCell>
-                          {log.type === "subscription" ? "Abonelik" : "Tek Seferlik"}
-                        </TableCell>
-                        <TableCell className="font-medium whitespace-nowrap">
-                          {log.old_price !== null ? `${log.old_price.toFixed(2)} ₺` : "-"} →{" "}
-                          <strong className="text-foreground">{log.new_price.toFixed(2)} ₺</strong>
-                        </TableCell>
-                        <TableCell>
-                          {log.apply_to_existing ? (
-                            <span className="text-amber-600 font-medium">Uygulandı</span>
-                          ) : (
-                            <span className="text-muted-foreground">Yalnızca Yeni</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
+                  return (
+                    <div key={log.id} className="rounded-xl border p-4 bg-card/60 space-y-2.5 shadow-xs">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <span className="font-mono font-semibold text-foreground text-sm block">
+                            #{log.product_id}
+                          </span>
+                          <span className="text-[11px] text-muted-foreground font-mono">
+                            {formatDate(log.created_at)}
+                          </span>
+                        </div>
+
+                        <div>
                           {isSuccess && (
                             <Badge className="bg-emerald-600 text-white gap-1 text-[10px] py-0.5">
                               <CheckCircle2Icon className="size-3" />
@@ -638,15 +719,110 @@ export function PriceManagementTab() {
                               Başarısız
                             </Badge>
                           )}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground truncate max-w-xs">
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-1 border-t text-xs">
+                        <div>
+                          <span className="text-muted-foreground block text-[11px]">Fiyat Değişimi</span>
+                          <span className="font-medium text-foreground pt-0.5 block">
+                            {log.old_price !== null ? `${log.old_price.toFixed(2)} ₺` : "-"} →{" "}
+                            <strong className="text-foreground">{log.new_price.toFixed(2)} ₺</strong>
+                          </span>
+                        </div>
+
+                        <div className="text-end">
+                          <span className="text-muted-foreground block text-[11px]">Kapsam</span>
+                          <span className="text-xs pt-0.5 block">
+                            {log.apply_to_existing ? (
+                              <span className="text-amber-600 font-medium">Tüm Aboneler</span>
+                            ) : (
+                              <span className="text-muted-foreground">Yalnızca Yeni</span>
+                            )}
+                          </span>
+                        </div>
+                      </div>
+
+                      {(log.error || isDryRun) && (
+                        <div className="text-[11px] text-muted-foreground bg-muted/40 p-2 rounded">
                           {log.error || (isDryRun ? "Simülasyon kaydı" : "İşlem tamamlandı")}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Masaüstü Tablo Görünümü (hidden md:block) */}
+              <div className="hidden md:block rounded-lg border overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/40 text-xs">
+                      <TableHead className="w-[140px]">Tarih / Saat</TableHead>
+                      <TableHead className="w-[180px]">Ürün ID</TableHead>
+                      <TableHead className="w-[100px]">Tür</TableHead>
+                      <TableHead className="w-[160px]">Fiyat Değişimi</TableHead>
+                      <TableHead className="w-[130px]">Mevcut Aboneler</TableHead>
+                      <TableHead className="w-[120px]">Durum</TableHead>
+                      <TableHead>Açıklama / Hata</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {logs.map((log) => {
+                      const isSuccess = log.status === "success";
+                      const isDryRun = log.status === "dry_run";
+
+                      return (
+                        <TableRow key={log.id} className="text-xs hover:bg-muted/10">
+                          <TableCell className="font-medium whitespace-nowrap text-muted-foreground">
+                            {formatDate(log.created_at)}
+                          </TableCell>
+                          <TableCell className="font-mono font-medium text-foreground">
+                            {log.product_id}
+                          </TableCell>
+                          <TableCell>
+                            {log.type === "subscription" ? "Abonelik" : "Tek Seferlik"}
+                          </TableCell>
+                          <TableCell className="font-medium whitespace-nowrap">
+                            {log.old_price !== null ? `${log.old_price.toFixed(2)} ₺` : "-"} →{" "}
+                            <strong className="text-foreground">{log.new_price.toFixed(2)} ₺</strong>
+                          </TableCell>
+                          <TableCell>
+                            {log.apply_to_existing ? (
+                              <span className="text-amber-600 font-medium">Uygulandı</span>
+                            ) : (
+                              <span className="text-muted-foreground">Yalnızca Yeni</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {isSuccess && (
+                              <Badge className="bg-emerald-600 text-white gap-1 text-[10px] py-0.5">
+                                <CheckCircle2Icon className="size-3" />
+                                Başarılı
+                              </Badge>
+                            )}
+                            {isDryRun && (
+                              <Badge className="bg-sky-600 text-white gap-1 text-[10px] py-0.5">
+                                <EyeIcon className="size-3" />
+                                Önizleme
+                              </Badge>
+                            )}
+                            {!isSuccess && !isDryRun && (
+                              <Badge className="bg-rose-600 text-white gap-1 text-[10px] py-0.5">
+                                <XCircleIcon className="size-3" />
+                                Başarısız
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground truncate max-w-xs">
+                            {log.error || (isDryRun ? "Simülasyon kaydı" : "İşlem tamamlandı")}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
           )}
         </CardContent>

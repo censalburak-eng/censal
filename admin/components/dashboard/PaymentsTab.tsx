@@ -176,7 +176,78 @@ export function PaymentsTab() {
         </CardHeader>
 
         <CardContent className="pt-4">
-          <div className="rounded-md border overflow-x-auto">
+          {/* Mobil Onay Bekleyenler Kart Listesi (md:hidden) */}
+          <div className="grid grid-cols-1 gap-3 md:hidden">
+            {pendingRequests.map((req) => {
+              const isBusy = processingId === req.id;
+              return (
+                <div key={req.id} className="rounded-xl border border-amber-500/30 p-4 bg-card space-y-3 shadow-xs">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="font-semibold text-foreground text-sm">
+                        {req.user_name || "Kullanıcı"}
+                      </div>
+                      <div className="text-xs text-muted-foreground font-mono">
+                        {req.user_phone || req.user_id.slice(0, 8) || "-"}
+                      </div>
+                    </div>
+                    <Badge variant="outline" className="text-xs font-medium">
+                      {packageLabels[req.package_type] || req.package_type}
+                    </Badge>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1 border-t text-xs">
+                    <div>
+                      <span className="text-muted-foreground block text-[11px]">Tutar</span>
+                      <span className="font-mono font-bold text-base text-foreground">
+                        ₺{Number(req.amount).toLocaleString("tr-TR", { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+
+                    <div className="text-end">
+                      <span className="text-muted-foreground block text-[11px]">Talep Tarihi</span>
+                      <span className="text-muted-foreground font-mono text-[11px]">
+                        {new Date(req.created_at).toLocaleString("tr-TR", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Mobil Onay / Red Butonları */}
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t">
+                    <Button
+                      size="sm"
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-9 gap-1.5 w-full"
+                      disabled={isBusy}
+                      onClick={() => handleApprove(req.id)}
+                    >
+                      <CheckIcon className="size-4" />
+                      {isBusy ? "Onaylanıyor..." : "Onayla"}
+                    </Button>
+
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-destructive/40 text-destructive hover:bg-destructive/10 text-xs h-9 gap-1 w-full"
+                      disabled={isBusy}
+                      onClick={() => handleReject(req.id)}
+                    >
+                      <XIcon className="size-4" />
+                      Reddet
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Masaüstü Tablo Görünümü (hidden md:block) */}
+          <div className="hidden md:block rounded-md border overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="bg-muted/50 text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b">
                 <tr>
@@ -250,14 +321,14 @@ export function PaymentsTab() {
                 })}
               </tbody>
             </table>
-
-            {pendingRequests.length === 0 && (
-              <div className="py-10 text-center text-sm text-muted-foreground flex flex-col items-center justify-center gap-2">
-                <CheckCircle2Icon className="size-8 text-emerald-500/60" />
-                <span>Onay bekleyen ödeme talebi bulunmamaktadır.</span>
-              </div>
-            )}
           </div>
+
+          {pendingRequests.length === 0 && (
+            <div className="py-10 text-center text-sm text-muted-foreground flex flex-col items-center justify-center gap-2">
+              <CheckCircle2Icon className="size-8 text-emerald-500/60" />
+              <span>Onay bekleyen ödeme talebi bulunmamaktadır.</span>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -315,12 +386,12 @@ export function PaymentsTab() {
             </CardDescription>
           </div>
 
-          <div className="flex items-center gap-2">
-            <div className="flex border rounded-lg p-0.5 bg-muted">
+          <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
+            <div className="flex border rounded-lg p-0.5 bg-muted overflow-x-auto max-w-full">
               <Button
                 size="sm"
                 variant={filterMode === "all" ? "default" : "ghost"}
-                className="text-xs h-7 px-2.5"
+                className="text-xs h-8 px-2.5 shrink-0"
                 onClick={() => setFilterMode("all")}
               >
                 Tümü ({payments.length})
@@ -328,7 +399,7 @@ export function PaymentsTab() {
               <Button
                 size="sm"
                 variant={filterMode === "success" ? "default" : "ghost"}
-                className="text-xs h-7 px-2.5"
+                className="text-xs h-8 px-2.5 shrink-0"
                 onClick={() => setFilterMode("success")}
               >
                 <CheckCircle2Icon className="size-3 text-emerald-500 me-1" />
@@ -337,7 +408,7 @@ export function PaymentsTab() {
               <Button
                 size="sm"
                 variant={filterMode === "failed" ? "destructive" : "ghost"}
-                className="text-xs h-7 px-2.5"
+                className="text-xs h-8 px-2.5 shrink-0"
                 onClick={() => setFilterMode("failed")}
               >
                 <ShieldAlertIcon className="size-3 me-1" />
@@ -345,14 +416,80 @@ export function PaymentsTab() {
               </Button>
             </div>
 
-            <Button size="icon" variant="outline" className="size-8" onClick={() => refetch()} title="Yenile">
+            <Button size="icon" variant="outline" className="size-8 shrink-0" onClick={() => refetch()} title="Yenile">
               <RefreshCwIcon className={`size-4 ${isLoading ? "animate-spin" : ""}`} />
             </Button>
           </div>
         </CardHeader>
 
         <CardContent>
-          <div className="rounded-md border overflow-x-auto">
+          {/* Mobil İşlem Geçmişi Kart Listesi (md:hidden) */}
+          <div className="grid grid-cols-1 gap-3 md:hidden">
+            {displayedList.map((item) => {
+              const meta = channelIcons[item.channel] || { label: item.channel, color: "text-foreground", bg: "bg-muted" };
+              const isSuccess = item.status === "success";
+
+              return (
+                <div key={item.id} className="rounded-xl border p-4 bg-card/60 space-y-2.5 shadow-xs">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="font-semibold text-foreground text-sm">
+                        {item.user_name || "Kullanıcı"}
+                      </div>
+                      <div className="text-xs text-muted-foreground font-mono">
+                        {item.user_phone || item.user_id?.slice(0, 8) || "-"}
+                      </div>
+                    </div>
+
+                    <div className="text-end">
+                      <span className="font-mono font-bold text-base text-foreground block">
+                        ₺{Number(item.amount).toLocaleString("tr-TR", { minimumFractionDigits: 2 })}
+                      </span>
+                      <Badge variant="outline" className="text-[11px] mt-0.5">
+                        {packageLabels[item.package_type] || item.package_type}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1 border-t text-xs">
+                    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold ${meta.bg} ${meta.color}`}>
+                      <CreditCardIcon className="size-3" />
+                      {meta.label}
+                    </span>
+
+                    {isSuccess ? (
+                      <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1 text-[11px]">
+                        <CheckCircle2Icon className="size-3" /> Başarılı
+                      </Badge>
+                    ) : (
+                      <Badge variant="destructive" className="gap-1 text-[11px]">
+                        <AlertCircleIcon className="size-3" /> Başarısız
+                      </Badge>
+                    )}
+                  </div>
+
+                  {!isSuccess && item.error_reason && (
+                    <div className="text-xs text-destructive bg-destructive/10 p-2 rounded text-[11px]">
+                      {item.error_reason}
+                    </div>
+                  )}
+
+                  <div className="text-[11px] text-muted-foreground font-mono pt-1 text-end">
+                    {new Date(item.created_at).toLocaleString("tr-TR", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Masaüstü Tablo Görünümü (hidden md:block) */}
+          <div className="hidden md:block rounded-md border overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="bg-muted/50 text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b">
                 <tr>
@@ -430,13 +567,13 @@ export function PaymentsTab() {
                 })}
               </tbody>
             </table>
-
-            {displayedList.length === 0 && (
-              <div className="py-12 text-center text-sm text-muted-foreground">
-                Kayıt bulunamadı.
-              </div>
-            )}
           </div>
+
+          {displayedList.length === 0 && (
+            <div className="py-12 text-center text-sm text-muted-foreground">
+              Kayıt bulunamadı.
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

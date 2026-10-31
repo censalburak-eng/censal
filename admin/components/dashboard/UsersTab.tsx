@@ -132,61 +132,41 @@ export function UsersTab() {
               <span className="ms-2 text-sm text-muted-foreground">Kullanıcılar aranıyor...</span>
             </div>
           ) : (
-            <div className="rounded-md border overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className="bg-muted/50 text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b">
-                  <tr>
-                    <th className="p-3">Kullanıcı</th>
-                    <th className="p-3">Telefon</th>
-                    <th className="p-3">Durum</th>
-                    <th className="p-3">Abonelik Durumu</th>
-                    <th className="p-3">Kayıt Tarihi</th>
-                    <th className="p-3 text-end">İşlemler</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {users.map((user) => {
-                    const fullName = `${user.first_name || ""} ${user.last_name || ""}`.trim() || "İsimsiz Kullanıcı";
-                    const hasActiveSub =
-                      user.subscription_status === "active" &&
-                      user.subscription_expires_at &&
-                      new Date(user.subscription_expires_at) > new Date();
+            <div className="space-y-4">
+              {/* Mobil Kart Görünümü (md:hidden) */}
+              <div className="grid grid-cols-1 gap-3 md:hidden">
+                {users.map((user) => {
+                  const fullName = `${user.first_name || ""} ${user.last_name || ""}`.trim() || "İsimsiz Kullanıcı";
+                  const hasActiveSub =
+                    user.subscription_status === "active" &&
+                    user.subscription_expires_at &&
+                    new Date(user.subscription_expires_at) > new Date();
 
-                    return (
-                      <tr key={user.id} className="hover:bg-muted/20 transition-colors">
-                        <td className="p-3">
-                          <div className="flex items-center gap-3">
-                            <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-bold text-xs uppercase">
-                              {user.first_name?.[0] || "U"}
+                  return (
+                    <div key={user.id} className="rounded-xl border p-4 bg-card/60 space-y-3 shadow-xs">
+                      {/* Üst Satır: Avatar, İsim & Durum */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-bold text-sm uppercase">
+                            {user.first_name?.[0] || "U"}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="font-semibold text-foreground flex items-center gap-1.5 flex-wrap">
+                              <span className="truncate">{fullName}</span>
+                              {user.role === "admin" && (
+                                <Badge variant="outline" className="text-[10px] py-0 px-1 border-primary text-primary">
+                                  ADMIN
+                                </Badge>
+                              )}
                             </div>
-                            <div>
-                              <div className="font-medium text-foreground flex items-center gap-1.5">
-                                {fullName}
-                                {user.role === "admin" && (
-                                  <Badge variant="outline" className="text-[10px] py-0 px-1 border-primary text-primary">
-                                    ADMIN
-                                  </Badge>
-                                )}
-                              </div>
-                              <div className="text-xs text-muted-foreground font-mono truncate max-w-[140px]">
-                                {user.id}
-                              </div>
+                            <div className="text-xs text-muted-foreground font-mono truncate max-w-[180px]">
+                              {user.id}
                             </div>
                           </div>
-                        </td>
+                        </div>
 
-                        <td className="p-3 font-mono text-xs text-muted-foreground">
-                          {user.phone ? (
-                            <span className="flex items-center gap-1">
-                              <PhoneIcon className="size-3 text-muted-foreground" />
-                              {user.phone}
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground/60">-</span>
-                          )}
-                        </td>
-
-                        <td className="p-3">
+                        {/* Ban / Aktif Rozeti */}
+                        <div className="shrink-0">
                           {user.is_banned ? (
                             <Badge variant="destructive" className="gap-1 text-xs">
                               <ShieldAlertIcon className="size-3" /> Banlı
@@ -196,85 +176,245 @@ export function UsersTab() {
                               <ShieldCheckIcon className="size-3" /> Aktif
                             </Badge>
                           )}
-                        </td>
+                        </div>
+                      </div>
 
-                        <td className="p-3">
+                      {/* Bilgiler: Telefon & Abonelik & Kayıt */}
+                      <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t">
+                        <div>
+                          <span className="text-muted-foreground block text-[11px]">Telefon</span>
+                          {user.phone ? (
+                            <span className="font-mono text-foreground font-medium flex items-center gap-1 pt-0.5">
+                              <PhoneIcon className="size-3 text-muted-foreground" />
+                              {user.phone}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground/60">-</span>
+                          )}
+                        </div>
+
+                        <div>
+                          <span className="text-muted-foreground block text-[11px]">Kayıt Tarihi</span>
+                          <span className="text-foreground pt-0.5 block">
+                            {new Date(user.created_at).toLocaleDateString("tr-TR")}
+                          </span>
+                        </div>
+
+                        <div className="col-span-2 pt-1">
+                          <span className="text-muted-foreground block text-[11px] mb-1">Abonelik Durumu</span>
                           {hasActiveSub ? (
-                            <div className="space-y-0.5">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <Badge className="bg-primary/90 text-primary-foreground gap-1 text-xs">
                                 <CrownIcon className="size-3" />
                                 {user.subscription_plan === "yearly" ? "Yıllık Plan" : "Aylık Plan"}
                               </Badge>
-                              <div className="text-[11px] text-muted-foreground flex items-center gap-1">
+                              <span className="text-[11px] text-muted-foreground flex items-center gap-1">
                                 <ClockIcon className="size-3" />
                                 Bitiş: {new Date(user.subscription_expires_at!).toLocaleDateString("tr-TR")}
-                              </div>
+                              </span>
                             </div>
                           ) : (
                             <Badge variant="secondary" className="text-xs text-muted-foreground">
                               Abonelik Yok
                             </Badge>
                           )}
-                        </td>
+                        </div>
+                      </div>
 
-                        <td className="p-3 text-xs text-muted-foreground">
-                          {new Date(user.created_at).toLocaleDateString("tr-TR")}
-                        </td>
+                      {/* Aksiyon Butonları (Mobilde dokunmatik) */}
+                      <div className="flex flex-wrap items-center gap-2 pt-2 border-t">
+                        <Button
+                          size="sm"
+                          variant={user.is_banned ? "outline" : "ghost"}
+                          className={`flex-1 text-xs h-9 ${user.is_banned ? "text-emerald-600 hover:text-emerald-700" : "text-destructive hover:bg-destructive/10"}`}
+                          onClick={() => handleBanClick(user)}
+                          disabled={isTogglingBan}
+                        >
+                          {user.is_banned ? (
+                            <>
+                              <UserCheckIcon className="size-3.5 me-1.5" /> Ban Kaldır
+                            </>
+                          ) : (
+                            <>
+                              <UserXIcon className="size-3.5 me-1.5" /> Banla
+                            </>
+                          )}
+                        </Button>
 
-                        <td className="p-3 text-end">
-                          <div className="flex items-center justify-end gap-1.5">
-                            {/* Ban / Unban Button */}
-                            <Button
-                              size="sm"
-                              variant={user.is_banned ? "outline" : "ghost"}
-                              className={user.is_banned ? "text-emerald-600 hover:text-emerald-700" : "text-destructive hover:bg-destructive/10"}
-                              onClick={() => handleBanClick(user)}
-                              disabled={isTogglingBan}
-                              title={user.is_banned ? "Banı Kaldır" : "Kullanıcıyı Banla"}
-                            >
-                              {user.is_banned ? (
-                                <>
-                                  <UserCheckIcon className="size-3.5 me-1" /> Ban Kaldır
-                                </>
-                              ) : (
-                                <>
-                                  <UserXIcon className="size-3.5 me-1" /> Banla
-                                </>
-                              )}
-                            </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleOpenGrant(user)}
+                          disabled={isGranting}
+                          className="flex-1 text-xs h-9"
+                        >
+                          <CrownIcon className="size-3.5 me-1.5 text-amber-500" />
+                          Abonelik
+                        </Button>
 
-                            {/* Manuel Abonelik Tanımla */}
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleOpenGrant(user)}
-                              disabled={isGranting}
-                              className="text-xs"
-                            >
-                              <CrownIcon className="size-3.5 me-1 text-amber-500" />
-                              Abonelik Tanımla
-                            </Button>
+                        {user.subscription_id && (
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => handleOpenExtend(user)}
+                            disabled={isExtending}
+                            className="w-full text-xs h-9"
+                          >
+                            <CalendarPlusIcon className="size-3.5 me-1.5" />
+                            Süreyi Uzat
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
 
-                            {/* Abonelik Süresini Uzat */}
-                            {user.subscription_id && (
+              {/* Masaüstü Tablo Görünümü (hidden md:block) */}
+              <div className="hidden md:block rounded-md border overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-muted/50 text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b">
+                    <tr>
+                      <th className="p-3">Kullanıcı</th>
+                      <th className="p-3">Telefon</th>
+                      <th className="p-3">Durum</th>
+                      <th className="p-3">Abonelik Durumu</th>
+                      <th className="p-3">Kayıt Tarihi</th>
+                      <th className="p-3 text-end">İşlemler</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {users.map((user) => {
+                      const fullName = `${user.first_name || ""} ${user.last_name || ""}`.trim() || "İsimsiz Kullanıcı";
+                      const hasActiveSub =
+                        user.subscription_status === "active" &&
+                        user.subscription_expires_at &&
+                        new Date(user.subscription_expires_at) > new Date();
+
+                      return (
+                        <tr key={user.id} className="hover:bg-muted/20 transition-colors">
+                          <td className="p-3">
+                            <div className="flex items-center gap-3">
+                              <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-bold text-xs uppercase">
+                                {user.first_name?.[0] || "U"}
+                              </div>
+                              <div>
+                                <div className="font-medium text-foreground flex items-center gap-1.5">
+                                  {fullName}
+                                  {user.role === "admin" && (
+                                    <Badge variant="outline" className="text-[10px] py-0 px-1 border-primary text-primary">
+                                      ADMIN
+                                    </Badge>
+                                  )}
+                                </div>
+                                <div className="text-xs text-muted-foreground font-mono truncate max-w-[140px]">
+                                  {user.id}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+
+                          <td className="p-3 font-mono text-xs text-muted-foreground">
+                            {user.phone ? (
+                              <span className="flex items-center gap-1">
+                                <PhoneIcon className="size-3 text-muted-foreground" />
+                                {user.phone}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground/60">-</span>
+                            )}
+                          </td>
+
+                          <td className="p-3">
+                            {user.is_banned ? (
+                              <Badge variant="destructive" className="gap-1 text-xs">
+                                <ShieldAlertIcon className="size-3" /> Banlı
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="gap-1 text-xs text-emerald-600 border-emerald-500/30">
+                                <ShieldCheckIcon className="size-3" /> Aktif
+                              </Badge>
+                            )}
+                          </td>
+
+                          <td className="p-3">
+                            {hasActiveSub ? (
+                              <div className="space-y-0.5">
+                                <Badge className="bg-primary/90 text-primary-foreground gap-1 text-xs">
+                                  <CrownIcon className="size-3" />
+                                  {user.subscription_plan === "yearly" ? "Yıllık Plan" : "Aylık Plan"}
+                                </Badge>
+                                <div className="text-[11px] text-muted-foreground flex items-center gap-1">
+                                  <ClockIcon className="size-3" />
+                                  Bitiş: {new Date(user.subscription_expires_at!).toLocaleDateString("tr-TR")}
+                                </div>
+                              </div>
+                            ) : (
+                              <Badge variant="secondary" className="text-xs text-muted-foreground">
+                                Abonelik Yok
+                              </Badge>
+                            )}
+                          </td>
+
+                          <td className="p-3 text-xs text-muted-foreground">
+                            {new Date(user.created_at).toLocaleDateString("tr-TR")}
+                          </td>
+
+                          <td className="p-3 text-end">
+                            <div className="flex items-center justify-end gap-1.5">
+                              {/* Ban / Unban Button */}
                               <Button
                                 size="sm"
-                                variant="secondary"
-                                onClick={() => handleOpenExtend(user)}
-                                disabled={isExtending}
+                                variant={user.is_banned ? "outline" : "ghost"}
+                                className={user.is_banned ? "text-emerald-600 hover:text-emerald-700" : "text-destructive hover:bg-destructive/10"}
+                                onClick={() => handleBanClick(user)}
+                                disabled={isTogglingBan}
+                                title={user.is_banned ? "Banı Kaldır" : "Kullanıcıyı Banla"}
+                              >
+                                {user.is_banned ? (
+                                  <>
+                                    <UserCheckIcon className="size-3.5 me-1" /> Ban Kaldır
+                                  </>
+                                ) : (
+                                  <>
+                                    <UserXIcon className="size-3.5 me-1" /> Banla
+                                  </>
+                                )}
+                              </Button>
+
+                              {/* Manuel Abonelik Tanımla */}
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleOpenGrant(user)}
+                                disabled={isGranting}
                                 className="text-xs"
                               >
-                                <CalendarPlusIcon className="size-3.5 me-1" />
-                                Süre Uzat
+                                <CrownIcon className="size-3.5 me-1 text-amber-500" />
+                                Abonelik Tanımla
                               </Button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+
+                              {/* Abonelik Süresini Uzat */}
+                              {user.subscription_id && (
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
+                                  onClick={() => handleOpenExtend(user)}
+                                  disabled={isExtending}
+                                  className="text-xs"
+                                >
+                                  <CalendarPlusIcon className="size-3.5 me-1" />
+                                  Süre Uzat
+                                </Button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
 
               {users.length === 0 && (
                 <div className="py-12 text-center text-sm text-muted-foreground">

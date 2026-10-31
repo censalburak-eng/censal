@@ -557,91 +557,160 @@ export function LogsTab() {
               </p>
             </div>
           ) : (
-            <div className="rounded-xl border overflow-hidden shadow-xs">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead className="w-[140px]">Tarih / Saat</TableHead>
-                    <TableHead className="w-[190px]">Yapılan İşlem</TableHead>
-                    <TableHead className="w-[220px]">İlgili Kullanıcı / Hedef</TableHead>
-                    <TableHead>İşlem Özeti (Ne Değişti?)</TableHead>
-                    <TableHead className="w-[180px] text-end">Yönetici</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredLogs.map((log) => {
-                    const meta = getActionMeta(log.action);
-                    const isExpanded = expandedLogId === log.id;
+            <div className="space-y-4">
+              {/* Mobil Log Kart Listesi (md:hidden) */}
+              <div className="grid grid-cols-1 gap-3 md:hidden">
+                {filteredLogs.map((log) => {
+                  const meta = getActionMeta(log.action);
+                  const isExpanded = expandedLogId === log.id;
 
-                    return (
-                      <TableRow key={log.id} className="hover:bg-muted/20 transition-colors">
-                        {/* Tarih */}
-                        <TableCell className="text-xs text-muted-foreground whitespace-nowrap font-medium">
+                  return (
+                    <div key={log.id} className="rounded-xl border p-4 bg-card/60 space-y-3 shadow-xs">
+                      {/* Üst Satır: Tarih & İşlem Rozeti */}
+                      <div className="flex items-start justify-between gap-2 flex-wrap">
+                        <Badge className={`${meta.badgeClass} gap-1.5 px-2.5 py-1 text-xs font-medium`}>
+                          {meta.icon}
+                          {meta.title}
+                        </Badge>
+                        <span className="text-[11px] text-muted-foreground font-mono">
                           {formatDate(log.created_at)}
-                        </TableCell>
+                        </span>
+                      </div>
 
-                        {/* Yapılan İşlem */}
-                        <TableCell>
-                          <Badge className={`${meta.badgeClass} gap-1.5 px-2.5 py-1 text-xs font-medium`}>
-                            {meta.icon}
-                            {meta.title}
-                          </Badge>
-                        </TableCell>
+                      {/* İlgili Kullanıcı / Hedef */}
+                      <div className="pt-1 text-sm">
+                        <span className="text-muted-foreground block text-[11px] mb-0.5">İlgili Hedef</span>
+                        {getTargetDisplay(log)}
+                      </div>
 
-                        {/* Nerede / Hangi Kullanıcıda Yapıldı */}
-                        <TableCell className="text-sm">
-                          {getTargetDisplay(log)}
-                        </TableCell>
+                      {/* İşlem Özeti */}
+                      <div className="pt-2 border-t text-xs space-y-1.5">
+                        <span className="text-muted-foreground block text-[11px]">İşlem Özeti</span>
+                        {renderHumanDetails(log)}
 
-                        {/* Ne Değişti */}
-                        <TableCell>
-                          <div className="space-y-1.5">
-                            {renderHumanDetails(log)}
-
-                            {/* Teknik JSON Detay Butonu (Sadece karmaşık ve ek teknik alan varsa göster) */}
-                            {log.details && shouldShowTechnicalDetails(log) && (
-                              <div>
-                                <button
-                                  type="button"
-                                  onClick={() => setExpandedLogId(isExpanded ? null : log.id)}
-                                  className="text-[11px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1 underline underline-offset-2"
-                                >
-                                  <EyeIcon className="size-3" />
-                                  {isExpanded ? "Teknik veriyi gizle" : "Teknik veriyi göster"}
-                                </button>
-                                {isExpanded && (
-                                  <pre className="mt-1.5 p-2 rounded-md bg-muted/80 text-[11px] font-mono overflow-x-auto max-h-32 border">
-                                    {JSON.stringify(log.details, null, 2)}
-                                  </pre>
-                                )}
-                              </div>
+                        {/* Teknik JSON Detay Butonu */}
+                        {log.details && shouldShowTechnicalDetails(log) && (
+                          <div className="pt-1">
+                            <button
+                              type="button"
+                              onClick={() => setExpandedLogId(isExpanded ? null : log.id)}
+                              className="text-[11px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1 underline underline-offset-2"
+                            >
+                              <EyeIcon className="size-3" />
+                              {isExpanded ? "Teknik veriyi gizle" : "Teknik veriyi göster"}
+                            </button>
+                            {isExpanded && (
+                              <pre className="mt-1.5 p-2 rounded-md bg-muted/80 text-[10px] font-mono overflow-x-auto max-h-32 border">
+                                {JSON.stringify(log.details, null, 2)}
+                              </pre>
                             )}
                           </div>
-                        </TableCell>
+                        )}
+                      </div>
 
-                        {/* İşlemi Yapan Yönetici */}
-                        <TableCell className="text-end">
-                          <div className="flex flex-col items-end gap-0.5">
-                            <span className="text-xs font-semibold text-foreground">
-                              {log.admin_first_name || log.admin_last_name
-                                ? `${log.admin_first_name || ""} ${log.admin_last_name || ""}`.trim()
-                                : log.admin_email || "Sistem / Yönetici"}
-                            </span>
-                            {log.admin_email && (log.admin_first_name || log.admin_last_name) && (
-                              <span className="text-[11px] text-muted-foreground">
-                                {log.admin_email}
+                      {/* İşlemi Yapan Yönetici */}
+                      <div className="flex items-center justify-between pt-2 border-t text-[11px] text-muted-foreground">
+                        <span className="font-medium text-foreground">
+                          {log.admin_first_name || log.admin_last_name
+                            ? `${log.admin_first_name || ""} ${log.admin_last_name || ""}`.trim()
+                            : log.admin_email || "Sistem / Yönetici"}
+                        </span>
+                        <span className="font-mono text-[10px]">
+                          {log.ip_address ? `IP: ${log.ip_address}` : "Panel"}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Masaüstü Tablo Görünümü (hidden md:block) */}
+              <div className="hidden md:block rounded-xl border overflow-x-auto shadow-xs">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      <TableHead className="w-[140px]">Tarih / Saat</TableHead>
+                      <TableHead className="w-[190px]">Yapılan İşlem</TableHead>
+                      <TableHead className="w-[220px]">İlgili Kullanıcı / Hedef</TableHead>
+                      <TableHead>İşlem Özeti (Ne Değişti?)</TableHead>
+                      <TableHead className="w-[180px] text-end">Yönetici</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredLogs.map((log) => {
+                      const meta = getActionMeta(log.action);
+                      const isExpanded = expandedLogId === log.id;
+
+                      return (
+                        <TableRow key={log.id} className="hover:bg-muted/20 transition-colors">
+                          {/* Tarih */}
+                          <TableCell className="text-xs text-muted-foreground whitespace-nowrap font-medium">
+                            {formatDate(log.created_at)}
+                          </TableCell>
+
+                          {/* Yapılan İşlem */}
+                          <TableCell>
+                            <Badge className={`${meta.badgeClass} gap-1.5 px-2.5 py-1 text-xs font-medium`}>
+                              {meta.icon}
+                              {meta.title}
+                            </Badge>
+                          </TableCell>
+
+                          {/* Nerede / Hangi Kullanıcıda Yapıldı */}
+                          <TableCell className="text-sm">
+                            {getTargetDisplay(log)}
+                          </TableCell>
+
+                          {/* Ne Değişti */}
+                          <TableCell>
+                            <div className="space-y-1.5">
+                              {renderHumanDetails(log)}
+
+                              {/* Teknik JSON Detay Butonu (Sadece karmaşık ve ek teknik alan varsa göster) */}
+                              {log.details && shouldShowTechnicalDetails(log) && (
+                                <div>
+                                  <button
+                                    type="button"
+                                    onClick={() => setExpandedLogId(isExpanded ? null : log.id)}
+                                    className="text-[11px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1 underline underline-offset-2"
+                                  >
+                                    <EyeIcon className="size-3" />
+                                    {isExpanded ? "Teknik veriyi gizle" : "Teknik veriyi göster"}
+                                  </button>
+                                  {isExpanded && (
+                                    <pre className="mt-1.5 p-2 rounded-md bg-muted/80 text-[11px] font-mono overflow-x-auto max-h-32 border">
+                                      {JSON.stringify(log.details, null, 2)}
+                                    </pre>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+
+                          {/* İşlemi Yapan Yönetici */}
+                          <TableCell className="text-end">
+                            <div className="flex flex-col items-end gap-0.5">
+                              <span className="text-xs font-semibold text-foreground">
+                                {log.admin_first_name || log.admin_last_name
+                                  ? `${log.admin_first_name || ""} ${log.admin_last_name || ""}`.trim()
+                                  : log.admin_email || "Sistem / Yönetici"}
                               </span>
-                            )}
-                            <span className="text-[10px] text-muted-foreground font-mono">
-                              {log.ip_address ? `IP: ${log.ip_address}` : "Panel üzerinden"}
-                            </span>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+                              {log.admin_email && (log.admin_first_name || log.admin_last_name) && (
+                                <span className="text-[11px] text-muted-foreground">
+                                  {log.admin_email}
+                                </span>
+                              )}
+                              <span className="text-[10px] text-muted-foreground font-mono">
+                                {log.ip_address ? `IP: ${log.ip_address}` : "Panel üzerinden"}
+                              </span>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
           )}
         </CardContent>
