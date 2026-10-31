@@ -115,7 +115,7 @@ export const paymentsApi = {
     const supabase = createClient();
 
     const [subsRes, pinsRes, settingsRes, reqsRes, priceLogsRes] = await Promise.all([
-      supabase.from('subscriptions').select('id, user_id, plan, source, status, created_at').order('created_at', { ascending: false }).limit(limit),
+      supabase.from('subscriptions').select('id, user_id, plan, source, status, expires_at, created_at').order('created_at', { ascending: false }).limit(limit),
       supabase.from('pinned_listings').select('id, user_id, city_id, status, created_at').order('created_at', { ascending: false }).limit(limit),
       supabase.from('app_settings').select('price_monthly, price_yearly, price_pin_24h').eq('id', 1).single(),
       supabase.from('payment_requests').select('*').order('created_at', { ascending: false }).limit(limit),
@@ -174,9 +174,20 @@ export const paymentsApi = {
     };
 
     const list: PaymentRecord[] = [];
+    const seenSubs = new Set<string>();
 
     // Abonelikler
-    (subsRes.data || []).forEach((sub) => {
+    (subsRes.data || []).forEach((sub: any) => {
+      // Çift kayıt koruması: Aynı kullanıcının aynı bitiş tarihli veya yakın zamanlı kaydını tekilleştir
+      const dedupeKey = sub.expires_at
+        ? `${sub.user_id}_${sub.expires_at}`
+        : `${sub.user_id}_${sub.plan}_${Math.floor(new Date(sub.created_at).getTime() / 15000)}`;
+
+      if (seenSubs.has(dedupeKey)) {
+        return;
+      }
+      seenSubs.add(dedupeKey);
+
       const u = sub.user_id ? userMap.get(sub.user_id) : null;
       const isYearly = sub.plan === 'yearly';
       // Eski kullanıcılar satın aldıkları tarihteki eski fiyattan, yeni kullanıcılar ise yeni fiyattan hesaplanır

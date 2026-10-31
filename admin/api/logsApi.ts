@@ -61,6 +61,21 @@ export const logsApi = {
       )
     );
 
+    const paymentUserIds = Array.from(
+      new Set(
+        logs
+          .filter(
+            (l) =>
+              (l.target_type === "payment_request" ||
+                l.target_type === "payment_requests" ||
+                l.action.toLowerCase().includes("payment")) &&
+              (l.details as any)?.user_id &&
+              !l.target_first_name
+          )
+          .map((l) => (l.details as any).user_id as string)
+      )
+    );
+
     const missingAdminIds = Array.from(
       new Set(
         logs
@@ -69,7 +84,7 @@ export const logsApi = {
       )
     );
 
-    const allIdsToFetch = Array.from(new Set([...missingTargetIds, ...missingAdminIds]));
+    const allIdsToFetch = Array.from(new Set([...missingTargetIds, ...paymentUserIds, ...missingAdminIds]));
 
     if (allIdsToFetch.length > 0) {
       try {
@@ -81,8 +96,15 @@ export const logsApi = {
         if (profs && profs.length > 0) {
           const profMap = new Map(profs.map((p) => [p.id, p]));
           for (const log of logs) {
-            if (log.target_id && profMap.has(log.target_id)) {
-              const p = profMap.get(log.target_id)!;
+            const detailUserId = (log.details as any)?.user_id;
+            const lookupId = (log.target_id && profMap.has(log.target_id))
+              ? log.target_id
+              : (detailUserId && profMap.has(detailUserId))
+              ? detailUserId
+              : null;
+
+            if (lookupId && profMap.has(lookupId)) {
+              const p = profMap.get(lookupId)!;
               log.target_first_name = log.target_first_name || p.first_name;
               log.target_last_name = log.target_last_name || p.last_name;
               log.target_phone = log.target_phone || p.phone;

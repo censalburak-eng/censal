@@ -131,6 +131,11 @@ export const createMockSubscription = async (
   return data as UserSubscription;
 };
 
+// Mükerrer / çift senkronizasyonu önlemek için hafıza içi kilit
+let inFlightSyncPromise: Promise<UserSubscription | null> | null = null;
+let lastSyncedSignature = '';
+let lastSyncTimestamp = 0;
+
 /**
  * RevenueCat'teki aktif aboneliği Supabase `subscriptions` tablosuna senkronize eder.
  * Böylece Admin paneli (Ödemeler, Kullanıcılar, Gelir İstatistikleri)
@@ -158,26 +163,48 @@ export const syncRevenueCatSubscription = async (
     expiresAtIso = d.toISOString();
   }
 
-  const source = Platform.OS === 'android' ? 'google' : Platform.OS === 'ios' ? 'apple' : 'revenuecat';
+  // İstek imzası (user + plan + expiresAt)
+  const currentSignature = `${userId}:${plan}:${expiresAtIso}`;
+  const now = Date.now();
 
-  try {
-    const { data, error } = await supabase.rpc('sync_revenuecat_subscription', {
-      p_user_id: userId,
-      p_plan: plan,
-      p_source: source,
-      p_expires_at: expiresAtIso,
-    });
-
-    if (error) {
-      console.warn('[syncRevenueCatSubscription] RPC senkronizasyon hatası:', error.message);
-      return null;
-    }
-
-    return data as UserSubscription;
-  } catch (err) {
-    console.warn('[syncRevenueCatSubscription] Beklenmeyen hata:', err);
+  // Son 5 saniye içinde aynı veri zaten başarıyla gönderildiyse çift istek atma
+  if (lastSyncedSignature === currentSignature && now - lastSyncTimestamp < 5000) {
     return null;
   }
+
+  // Eğer şu an çalışan aktif bir senkronizasyon isteği varsa, tekrar RPC çağırma, mevcut promise'i bekle
+  if (inFlightSyncPromise) {
+    return inFlightSyncPromise;
+  }
+
+  const source = Platform.OS === 'android' ? 'google' : Platform.OS === 'ios' ? 'apple' : 'revenuecat';
+
+  inFlightSyncPromise = (async () => {
+    try {
+      const { data, error } = await supabase.rpc('sync_revenuecat_subscription', {
+        p_user_id: userId,
+        p_plan: plan,
+        p_source: source,
+        p_expires_at: expiresAtIso,
+      });
+
+      if (error) {
+        console.warn('[syncRevenueCatSubscription] RPC senkronizasyon hatası:', error.message);
+        return null;
+      }
+
+      lastSyncedSignature = currentSignature;
+      lastSyncTimestamp = Date.now();
+      return data as UserSubscription;
+    } catch (err) {
+      console.warn('[syncRevenueCatSubscription] Beklenmeyen hata:', err);
+      return null;
+    } finally {
+      inFlightSyncPromise = null;
+    }
+  })();
+
+  return inFlightSyncPromise;
 };
 
 export type PaymentRequestItem = {
