@@ -195,10 +195,17 @@ export async function POST(req: NextRequest) {
         throw new Error(`Abonelik için aktif bir base plan bulunamadı (${productId}).`);
       }
 
-      let targetBasePlan = activePlans[0];
+      // Hedef plan bulunamazsa başka bir planın fiyatını değiştirmemek için işlemi durdur
+      let targetBasePlan;
       if (basePlanId) {
-        const found = subscription.basePlans.find((bp) => bp.basePlanId === basePlanId);
-        if (found) targetBasePlan = found;
+        targetBasePlan = activePlans.find((bp) => bp.basePlanId === basePlanId);
+        if (!targetBasePlan) {
+          throw new Error(`Aktif base plan bulunamadı (${productId} / ${basePlanId}). Fiyat değiştirilmedi.`);
+        }
+      } else if (activePlans.length === 1) {
+        targetBasePlan = activePlans[0];
+      } else {
+        throw new Error(`${productId} için birden fazla aktif base plan var; basePlanId belirtilmelidir. Fiyat değiştirilmedi.`);
       }
 
       // TR regionalConfig'i bul veya ekle
@@ -362,7 +369,22 @@ export async function POST(req: NextRequest) {
         throw new Error(`Tek seferlik ürün için purchase option bulunamadı (${productId}).`);
       }
 
-      const targetPurchaseOption = otp.purchaseOptions[0];
+      // Ürün listesindeki basePlanId, tek seferlik ürünlerde purchaseOptionId'dir
+      const activePurchaseOptions = otp.purchaseOptions.filter(
+        (po) => !po.state || po.state === "ACTIVE"
+      );
+      let targetPurchaseOption;
+      if (basePlanId) {
+        targetPurchaseOption = activePurchaseOptions.find((po) => po.purchaseOptionId === basePlanId);
+        if (!targetPurchaseOption) {
+          throw new Error(`Aktif purchase option bulunamadı (${productId} / ${basePlanId}). Fiyat değiştirilmedi.`);
+        }
+      } else if (activePurchaseOptions.length === 1) {
+        targetPurchaseOption = activePurchaseOptions[0];
+      } else {
+        throw new Error(`${productId} için birden fazla aktif purchase option var; basePlanId belirtilmelidir. Fiyat değiştirilmedi.`);
+      }
+
       if (!targetPurchaseOption.regionalPricingAndAvailabilityConfigs) {
         targetPurchaseOption.regionalPricingAndAvailabilityConfigs = [];
       }
@@ -393,9 +415,10 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({
           success: true,
           dryRun: true,
-          message: `Önizleme Başarılı: ${productId} tek seferlik ürün fiyatı ${oldPrice ?? "0"} ₺'den ${price} ₺'ye değiştirilecektir.`,
+          message: `Önizleme Başarılı: ${productId} (${targetPurchaseOption.purchaseOptionId}) tek seferlik ürün fiyatı ${oldPrice ?? "0"} ₺'den ${price} ₺'ye değiştirilecektir.`,
           details: {
             productId,
+            basePlanId: targetPurchaseOption.purchaseOptionId,
             oldPrice,
             newPrice: price,
             units,

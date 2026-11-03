@@ -60,8 +60,10 @@ export function PriceManagementTab() {
   const [search, setSearch] = React.useState("");
   const [filterType, setFilterType] = React.useState<"all" | "subscription" | "onetime">("all");
 
-  // Her ürün için girilen yeni fiyat state'i (productId -> string)
+  // Her ürün satırı için girilen yeni fiyat state'i (productId:basePlanId -> string)
+  // Aynı ürünün farklı planları/seçenekleri birbirinin input'unu doldurmasın diye plan da anahtara dahil
   const [priceInputs, setPriceInputs] = React.useState<Record<string, string>>({});
+  const getPriceKey = (p: PlayProductItem) => `${p.productId}:${p.basePlanId ?? ""}`;
 
   // Onay modalı state'i
   const [selectedProduct, setSelectedProduct] = React.useState<PlayProductItem | null>(null);
@@ -97,16 +99,16 @@ export function PriceManagementTab() {
     });
   }, [products, search, filterType]);
 
-  const handlePriceInputChange = (productId: string, val: string) => {
+  const handlePriceInputChange = (priceKey: string, val: string) => {
     // Sadece rakam ve nokta/virgül girişine izin ver
     const sanitized = val.replace(",", ".");
     if (/^\d*\.?\d{0,2}$/.test(sanitized)) {
-      setPriceInputs((prev) => ({ ...prev, [productId]: sanitized }));
+      setPriceInputs((prev) => ({ ...prev, [priceKey]: sanitized }));
     }
   };
 
   const getEnteredPrice = (product: PlayProductItem): number | null => {
-    const raw = priceInputs[product.productId];
+    const raw = priceInputs[getPriceKey(product)];
     if (!raw) return null;
     const num = parseFloat(raw);
     if (!Number.isFinite(num) || num <= 0 || num > 10000) return null;
@@ -380,8 +382,8 @@ export function PriceManagementTab() {
                               type="text"
                               inputMode="decimal"
                               placeholder={p.currentPrice ? p.currentPrice.toString() : "0.00"}
-                              value={priceInputs[p.productId] ?? ""}
-                              onChange={(e) => handlePriceInputChange(p.productId, e.target.value)}
+                              value={priceInputs[getPriceKey(p)] ?? ""}
+                              onChange={(e) => handlePriceInputChange(getPriceKey(p), e.target.value)}
                               disabled={!isAllowed || isUpdating}
                               className="pe-7 h-9 text-xs font-mono w-full"
                             />
@@ -488,8 +490,8 @@ export function PriceManagementTab() {
                                 type="text"
                                 inputMode="decimal"
                                 placeholder={p.currentPrice ? p.currentPrice.toString() : "0.00"}
-                                value={priceInputs[p.productId] ?? ""}
-                                onChange={(e) => handlePriceInputChange(p.productId, e.target.value)}
+                                value={priceInputs[getPriceKey(p)] ?? ""}
+                                onChange={(e) => handlePriceInputChange(getPriceKey(p), e.target.value)}
                                 disabled={!isAllowed || isUpdating}
                                 className="pe-7 h-8 text-xs font-mono"
                               />
