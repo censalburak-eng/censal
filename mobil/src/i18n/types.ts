@@ -63,7 +63,6 @@ export type TranslationStructure = {
     removePhoto: string;
     photoPreview: string;
     optional: string;
-    moderationNotice: string;
     completeTitle: string;
     completeSubtitle: string;
     firstNameLabel: string;

@@ -70,7 +70,6 @@ export const ru: TranslationStructure = {
     removePhoto: 'Удалить фото',
     photoPreview: 'Просмотр фото',
     optional: '(Необязательно)',
-    moderationNotice: 'Включена автоматическая фильтрация NSFW и AI-контента',
     completeTitle: 'Создайте ваш профиль',
     completeSubtitle: 'Заполните профиль, чтобы безопасно публиковать объявления и общаться в комнатах.',
     firstNameLabel: 'Ваше имя',

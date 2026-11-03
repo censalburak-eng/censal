@@ -3,7 +3,7 @@
  *
  * Kamera veya galeriden seçim yapılmasını sağlar.
  * Seçilen görseli önizleme olarak gösterir.
- * NSFW denetimi ve yükleme durumunu kullanıcıya bildirir.
+ * Yükleme durumunu kullanıcıya bildirir.
  *
  * Kullanım:
  *   <MediaPickerSheet
@@ -139,7 +139,7 @@ export const MediaPickerSheet: React.FC<MediaPickerSheetProps> = ({
       setState({
         phase: 'error',
         uri,
-        // NSFW/denetim hatası gibi sunucudan gelen anlamlı mesajı koru
+        // Sunucudan gelen anlamlı hata mesajını koru
         message: err instanceof Error && err.message ? err.message : t.media.uploadFailed,
       });
     }

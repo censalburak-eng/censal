@@ -2,6 +2,7 @@ import { supabase } from '../lib/supabase';
 import { Profile, PublicProfile, CreateProfileInput, UpdateProfileInput } from '../types/profile.types';
 import { mapDatabaseError } from '../lib/errors';
 import { CITIES_DATA } from '../data/cities';
+import { logoutRevenueCatUser } from '../lib/purchases';
 
 // 1. KULLANICININ KENDİ PROFİLİ
 export const getProfile = async (
@@ -196,19 +197,16 @@ export const deleteAccountAndData = async (userId: string): Promise<void> => {
     });
 
     if (fnError) {
-      // Katman 3: Doğrudan kullanıcıya ait verileri temizlemeyi dene
-      try {
-        await supabase.from('messages').delete().eq('user_id', userId);
-        await supabase.from('direct_messages').delete().eq('sender_id', userId);
-        await supabase.from('pinned_listings').delete().eq('user_id', userId);
-        await supabase.from('blocked_users').delete().eq('blocker_id', userId);
-        await supabase.from('profiles').delete().eq('id', userId);
-      } catch (err) {
-        console.warn('[deleteAccountAndData] Veri temizleme adımı uyarısı:', err);
-      }
+      // İki yol da başarısızsa hesap silinmemiştir: kullanıcıya "silindi" denmez, oturum açık kalır.
+      // (İstemciden tablo tablo silmek auth kullanıcısını silmediği için gerçek bir silme sayılmaz.)
+      console.warn('[deleteAccountAndData] Hesap silinemedi:', rpcError.message, fnError.message);
+      // Mesaj boş bırakılır: ekran çevrilmiş "hesap silinemedi" metnini gösterir
+      throw new Error();
     }
   }
 
-  // Katman 4: Tüm oturum tokenlerini temizle ve çıkış yap
+  // Hesap silindi: RevenueCat kimliğini ayır ve oturumu kapat
+  // (SIGNED_OUT olayı önbelleği temizler; kullanıcı silindiği için signOut hatası önemsenmez)
+  await logoutRevenueCatUser();
   await supabase.auth.signOut();
 };

@@ -73,7 +73,6 @@ export const ar: TranslationStructure = {
     removePhoto: 'إزالة الصورة',
     photoPreview: 'معاينة الصورة',
     optional: '(اختياري)',
-    moderationNotice: 'فحص المحتوى (NSFW / الذكاء الاصطناعي) مفعّل',
     completeTitle: 'إنشاء ملفك الشخصي',
     completeSubtitle: 'أكمل معلومات ملفك الشخصي لمشاركة الإعلانات والرسائل بأمان في غرف المدن.',
     firstNameLabel: 'الاسم',

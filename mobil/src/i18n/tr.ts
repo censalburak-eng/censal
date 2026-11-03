@@ -70,7 +70,6 @@ export const tr: TranslationStructure = {
     removePhoto: 'Fotoğrafı Kaldır',
     photoPreview: 'Fotoğrafı Gör',
     optional: '(İsteğe bağlı)',
-    moderationNotice: 'NSFW / AI içerik kontrolü aktiftir',
     completeTitle: 'Profilini Oluştur',
     completeSubtitle: 'Şehir odalarında güvenle ilan ve mesaj paylaşmak için profil bilgilerinizi tamamlayın.',
     firstNameLabel: 'Adınız',

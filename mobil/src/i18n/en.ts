@@ -70,7 +70,6 @@ export const en: TranslationStructure = {
     removePhoto: 'Remove Photo',
     photoPreview: 'Preview Photo',
     optional: '(Optional)',
-    moderationNotice: 'NSFW / AI safety filters are active',
     completeTitle: 'Create Your Profile',
     completeSubtitle: 'Complete your profile details to safely post ads and messages in city rooms.',
     firstNameLabel: 'First Name',

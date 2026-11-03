@@ -63,7 +63,7 @@ export const ProfilePhotoPicker: React.FC<ProfilePhotoPickerProps> = ({
       onUploadingChange?.(true);
       setPreviewUri(asset.uri);
 
-      // NSFW / TensorFlow Denetimi + Supabase avatars bucket yüklemesi
+      // Supabase avatars bucket yüklemesi
       const uploadedUrl = await uploadAvatarImage(asset.base64);
 
       setPreviewUri(uploadedUrl);
@@ -265,15 +265,6 @@ export const ProfilePhotoPicker: React.FC<ProfilePhotoPickerProps> = ({
           </Text>
         </Text>
       )}
-
-      <Text
-        style={{
-          fontSize: tokens.moderateScale(tokens.typography.fontSize.caption),
-          color: colors.muted,
-        }}
-      >
-        {t.profile.moderationNotice}
-      </Text>
     </View>
   );
 };
