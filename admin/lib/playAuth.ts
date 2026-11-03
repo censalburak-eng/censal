@@ -115,30 +115,32 @@ export async function verifyAdmin(): Promise<
       };
     }
 
-    // Admins tablosundan yetki kontrolü
+    // Admins tablosundan yetki kontrolü (proxy ile aynı, tek yetki kaynağı)
     const { data: adminRecord, error: adminErr } = await supabase
       .from("admins")
       .select("role")
       .eq("user_id", user.id)
       .maybeSingle();
 
-    if (adminErr || !adminRecord) {
-      // Yedek kontrol: profiles.role === 'admin'
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .maybeSingle();
+    if (adminErr) {
+      console.error("Admin lookup error:", adminErr);
+      return {
+        authorized: false,
+        response: NextResponse.json(
+          { error: "Yetki doğrulaması sırasında bir hata oluştu." },
+          { status: 500 }
+        ),
+      };
+    }
 
-      if (profile?.role !== "admin") {
-        return {
-          authorized: false,
-          response: NextResponse.json(
-            { error: "Bu işlem için yönetici (admin) yetkisi gereklidir." },
-            { status: 403 }
-          ),
-        };
-      }
+    if (!adminRecord) {
+      return {
+        authorized: false,
+        response: NextResponse.json(
+          { error: "Bu işlem için yönetici (admin) yetkisi gereklidir." },
+          { status: 403 }
+        ),
+      };
     }
 
     return {
