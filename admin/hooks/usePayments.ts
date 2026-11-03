@@ -34,9 +34,11 @@ export function usePayments(limit = 100) {
     mutationFn: async ({ requestId, note }: { requestId: string; note?: string }) => {
       return await paymentsApi.approvePaymentRequest(requestId, note);
     },
+    // invalidate promise'i döndürülür: mutateAsync liste yenilenene kadar bekler,
+    // böylece işlenmiş talebin butonları liste güncellenmeden tekrar aktif olmaz
     onSuccess: () => {
       toast.success('Ödeme talebi onaylandı ve hizmet kullanıcıya tanımlandı!');
-      queryClient.invalidateQueries({ queryKey: paymentKeys.all });
+      return queryClient.invalidateQueries({ queryKey: paymentKeys.all });
     },
     onError: (err: any) => {
       toast.error(`Onaylama hatası: ${err.message || 'İşlem başarısız'}`);
@@ -49,7 +51,7 @@ export function usePayments(limit = 100) {
     },
     onSuccess: () => {
       toast.info('Ödeme talebi reddedildi.');
-      queryClient.invalidateQueries({ queryKey: paymentKeys.all });
+      return queryClient.invalidateQueries({ queryKey: paymentKeys.all });
     },
     onError: (err: any) => {
       toast.error(`Reddetme hatası: ${err.message || 'İşlem başarısız'}`);

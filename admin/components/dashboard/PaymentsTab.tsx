@@ -32,7 +32,8 @@ export function PaymentsTab() {
     rejectPayment,
   } = usePayments();
 
-  const [processingId, setProcessingId] = React.useState<string | null>(null);
+  // Aynı anda birden fazla talep işlenebilir; her biri kendi işlemi ve liste yenilemesi bitene kadar kilitli kalır
+  const [processingIds, setProcessingIds] = React.useState<Set<string>>(() => new Set());
   const [filterMode, setFilterMode] = React.useState<"all" | "failed" | "success">("all");
 
   const displayedList = React.useMemo(() => {
@@ -53,23 +54,24 @@ export function PaymentsTab() {
     pin_24h: "24s Sabit İlan",
   };
 
-  const handleApprove = async (id: string) => {
+  const processRequest = async (id: string, action: (id: string) => Promise<unknown>) => {
+    if (processingIds.has(id)) return;
+    setProcessingIds((prev) => new Set(prev).add(id));
     try {
-      setProcessingId(id);
-      await approvePayment(id);
+      await action(id);
+    } catch {
+      // Hata mesajı usePayments içindeki onError'da toast olarak gösteriliyor
     } finally {
-      setProcessingId(null);
+      setProcessingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
     }
   };
 
-  const handleReject = async (id: string) => {
-    try {
-      setProcessingId(id);
-      await rejectPayment(id);
-    } finally {
-      setProcessingId(null);
-    }
-  };
+  const handleApprove = (id: string) => processRequest(id, approvePayment);
+  const handleReject = (id: string) => processRequest(id, rejectPayment);
 
   return (
     <div className="space-y-6">
@@ -179,7 +181,7 @@ export function PaymentsTab() {
           {/* Mobil Onay Bekleyenler Kart Listesi (md:hidden) */}
           <div className="grid grid-cols-1 gap-3 md:hidden">
             {pendingRequests.map((req) => {
-              const isBusy = processingId === req.id;
+              const isBusy = processingIds.has(req.id);
               return (
                 <div key={req.id} className="rounded-xl border border-amber-500/30 p-4 bg-card space-y-3 shadow-xs">
                   <div className="flex items-start justify-between gap-2">
@@ -260,7 +262,7 @@ export function PaymentsTab() {
               </thead>
               <tbody className="divide-y divide-border">
                 {pendingRequests.map((req) => {
-                  const isBusy = processingId === req.id;
+                  const isBusy = processingIds.has(req.id);
                   return (
                     <tr key={req.id} className="hover:bg-muted/20 transition-colors">
                       <td className="p-3">

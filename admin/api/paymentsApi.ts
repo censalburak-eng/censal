@@ -43,6 +43,17 @@ export type RevenueStats = {
   pending_count: number;
 };
 
+/**
+ * RPC hata döndürmeden { success: false } dönerse (talep zaten işlenmiş, bulunamadı vb.)
+ * işlemi başarılı saymamak için hata fırlatır.
+ */
+function assertRpcSucceeded(data: unknown, fallbackMessage: string): void {
+  if (data && typeof data === 'object' && 'success' in data && (data as { success: unknown }).success === false) {
+    const { message, error } = data as { message?: string; error?: string };
+    throw new Error(message || error || fallbackMessage);
+  }
+}
+
 export const paymentsApi = {
   async getPaymentRequests(): Promise<PaymentRequestRecord[]> {
     const supabase = createClient();
@@ -51,9 +62,10 @@ export const paymentsApi = {
       .select('*')
       .order('created_at', { ascending: false });
 
+    // Hata yutulmaz: aksi halde yetki/ağ hatası "bekleyen talep yok" gibi görünür
     if (error) {
       console.error('getPaymentRequests error:', error);
-      return [];
+      throw new Error(error.message);
     }
 
     const userIds = Array.from(new Set((requests || []).map((r) => r.user_id).filter(Boolean)));
@@ -95,6 +107,7 @@ export const paymentsApi = {
     if (error) {
       throw new Error(error.message);
     }
+    assertRpcSucceeded(data, 'Talep onaylanamadı (zaten işlenmiş veya bulunamamış olabilir).');
     return data;
   },
 
@@ -108,6 +121,7 @@ export const paymentsApi = {
     if (error) {
       throw new Error(error.message);
     }
+    assertRpcSucceeded(data, 'Talep reddedilemedi (zaten işlenmiş veya bulunamamış olabilir).');
     return data;
   },
 
@@ -117,10 +131,17 @@ export const paymentsApi = {
     const [subsRes, pinsRes, settingsRes, reqsRes, priceLogsRes] = await Promise.all([
       supabase.from('subscriptions').select('id, user_id, plan, source, status, expires_at, created_at').order('created_at', { ascending: false }).limit(limit),
       supabase.from('pinned_listings').select('id, user_id, city_id, status, created_at').order('created_at', { ascending: false }).limit(limit),
-      supabase.from('app_settings').select('price_monthly, price_yearly, price_pin_24h').eq('id', 1).single(),
+      supabase.from('app_settings').select('price_monthly, price_yearly, price_pin_24h').eq('id', 1).maybeSingle(),
       supabase.from('payment_requests').select('*').order('created_at', { ascending: false }).limit(limit),
       supabase.from('price_change_logs').select('product_id, old_price, new_price, status, created_at').eq('status', 'success').order('created_at', { ascending: true }),
     ]);
+
+    // Sorgulardan biri başarısızsa eksik/yanlış liste ve sabit fiyatlarla sessizce devam etme
+    const queryError = subsRes.error || pinsRes.error || settingsRes.error || reqsRes.error || priceLogsRes.error;
+    if (queryError) {
+      console.error('getPayments error:', queryError);
+      throw new Error(queryError.message);
+    }
 
     const userIds = new Set<string>();
     (subsRes.data || []).forEach((s) => { if (s.user_id) userIds.add(s.user_id); });

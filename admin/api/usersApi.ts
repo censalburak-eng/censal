@@ -112,27 +112,37 @@ export const usersApi = {
 
   async grantSubscription(userId: string, plan: 'monthly' | 'yearly', durationDays = 30): Promise<void> {
     const supabase = createClient();
-    const expiresAt = new Date();
+
+    const { data: existingSubs, error: readErr } = await supabase
+      .from('subscriptions')
+      .select('id, source, expires_at')
+      .eq('user_id', userId);
+
+    // Okuma başarısızsa mükerrer satır eklememek için işlemi durdur
+    if (readErr) throw readErr;
+
+    // Süre, kullanıcının en geç biten aktif aboneliğinin üzerine eklenir (mevcut süre kısalmaz)
+    const now = new Date();
+    const latestActiveExpiry = (existingSubs || [])
+      .map((s) => new Date(s.expires_at))
+      .filter((d) => d > now)
+      .sort((a, b) => b.getTime() - a.getTime())[0];
+    const expiresAt = new Date(latestActiveExpiry ?? now);
     expiresAt.setDate(expiresAt.getDate() + durationDays);
 
-    const { data: existing } = await supabase
-      .from('subscriptions')
-      .select('id')
-      .eq('user_id', userId)
-      .limit(1)
-      .maybeSingle();
+    // Mağaza (google/apple/revenuecat) kaynaklı satırlara dokunulmaz; yalnızca manuel satır güncellenir veya yenisi eklenir
+    const manualSub = (existingSubs || []).find((s) => s.source === 'manual');
 
     let subErr;
-    if (existing) {
+    if (manualSub) {
       const res = await supabase
         .from('subscriptions')
         .update({
           plan,
-          source: 'manual',
           status: 'active',
           expires_at: expiresAt.toISOString(),
         })
-        .eq('user_id', userId);
+        .eq('id', manualSub.id);
       subErr = res.error;
     } else {
       const res = await supabase.from('subscriptions').insert({
