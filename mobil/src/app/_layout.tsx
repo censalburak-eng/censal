@@ -66,7 +66,7 @@ function AuthNavigationGate() {
     if (isChecking) return;
 
     const inAuthGroup = segments[0] === '(auth)';
-    const isCompleteProfile = inAuthGroup && segments[1] === 'complete-profile';
+    const isCompleteProfile = inAuthGroup && (segments as string[])[1] === 'complete-profile';
     const isAuthCallback = segments[0] === 'auth';
 
     // 0) Callback sayfasındayken araya girme, callback ekranı işlemi tamamlasın
