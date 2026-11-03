@@ -76,7 +76,7 @@ export const PhoneInputScreen: React.FC = () => {
   const handleGoogleLogin = async () => {
     try {
       setErrorMessage(null);
-      await socialAuthMutation.mutateAsync('google');
+      await socialAuthMutation.mutateAsync();
     } catch (err: unknown) {
       const appError = mapAuthError(err);
       if (appError.code !== 'CANCELLED') {

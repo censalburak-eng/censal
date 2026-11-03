@@ -3,7 +3,7 @@ import { User, Session } from '@supabase/supabase-js';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { supabase } from '../lib/supabase';
-import { signOut as authSignOut, signInWithSocialMock, signInWithGoogleOAuth, signInWithEmail, signUpWithEmail } from '../api/authApi';
+import { signOut as authSignOut, signInWithGoogleOAuth, signInWithEmail, signUpWithEmail } from '../api/authApi';
 import { profileKeys } from './useProfile';
 import { getProfile } from '../api/profileApi';
 import { subscriptionKeys, getActiveSubscription } from '../api/subscriptionApi';
@@ -131,11 +131,9 @@ export const useSocialAuth = () => {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: async (provider: 'apple' | 'google') => {
-      if (provider === 'google') {
-        return await signInWithGoogleOAuth();
-      }
-      return await signInWithSocialMock(provider);
+    // Şimdilik yalnızca Google OAuth destekleniyor
+    mutationFn: async () => {
+      return await signInWithGoogleOAuth();
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: authKeys.all });

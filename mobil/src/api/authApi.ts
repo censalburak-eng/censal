@@ -143,22 +143,3 @@ export const signUpWithEmail = async (
     session: data.session,
   };
 };
-
-export const signInWithSocialMock = async (
-  provider: 'apple' | 'google'
-): Promise<{ user: unknown; session: unknown }> => {
-  const email = provider === 'apple' ? 'apple.demo.user@gmail.com' : 'google.demo.user@gmail.com';
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password: 'Password123!',
-  });
-
-  if (error) {
-    throw mapAuthError(error);
-  }
-
-  return {
-    user: data.user,
-    session: data.session,
-  };
-};
