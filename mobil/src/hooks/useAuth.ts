@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { User, Session } from '@supabase/supabase-js';
+import { User, Session, isAuthApiError } from '@supabase/supabase-js';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { supabase } from '../lib/supabase';
@@ -25,7 +25,18 @@ const validateAndSetSession = async (session: Session | null) => {
   if (session) {
     try {
       const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (userError || !userData?.user) {
+
+      // Ağ hatası / sunucu geçici hatası: oturum geçersiz sayılmaz, mevcut oturumla devam edilir
+      // (supabase-js bu hataları throw etmez, { error } olarak döner)
+      const isInvalidSession =
+        isAuthApiError(userError) &&
+        (userError.status === 401 || userError.status === 403 || userError.status === 404);
+
+      if (userError && !isInvalidSession) {
+        console.warn('[useAuth] getUser geçici hata, oturum korunuyor:', userError.message);
+        cachedSession = session;
+        cachedUser = session.user;
+      } else if (isInvalidSession || !userData?.user) {
         console.warn('[useAuth] Yerel oturum geçersiz veya kullanıcı DB\'den silinmiş (zombie session). Temizleniyor:', userError?.message);
         await supabase.auth.signOut();
         cachedSession = null;
@@ -33,9 +44,10 @@ const validateAndSetSession = async (session: Session | null) => {
         isAuthInitialized = true;
         listeners.forEach((fn) => fn(null));
         return;
+      } else {
+        cachedSession = session;
+        cachedUser = userData.user;
       }
-      cachedSession = session;
-      cachedUser = userData.user;
     } catch (err) {
       console.warn('[useAuth] getUser kontrol hatası:', err);
       cachedSession = session;
