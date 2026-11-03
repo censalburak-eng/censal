@@ -22,17 +22,18 @@ import {
   setAudioModeAsync,
   useAudioRecorderState,
 } from "expo-audio";
-import { Buffer } from "buffer";
 import { useTheme } from "../../theme";
 import { tokens } from "../../theme/tokens";
-import { supabase } from "../../lib/supabase";
+import { uploadVoiceMessage, MediaUploadTarget } from "../../api/storageApi";
 import { useI18n } from "@/i18n";
 
 export type VoiceRecorderSheetProps = {
   visible: boolean;
   onClose: () => void;
-  /** url: Supabase storage URL, durationSec: saniye */
+  /** url: oda için public URL, DM için private dosya yolu; durationSec: saniye */
   onSend: (url: string, durationSec: number) => void;
+  /** Varsayılan: oda (public). DM için private bucket'a yüklenir. */
+  uploadTarget?: MediaUploadTarget;
 };
 
 type Phase =
@@ -57,6 +58,7 @@ export const VoiceRecorderSheet: React.FC<VoiceRecorderSheetProps> = ({
   visible,
   onClose,
   onSend,
+  uploadTarget,
 }) => {
   const { colors, isDark } = useTheme();
   const { t } = useI18n();
@@ -143,13 +145,6 @@ export const VoiceRecorderSheet: React.FC<VoiceRecorderSheetProps> = ({
     setPhase({ type: "uploading", uri, durationSec });
 
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const userId = session?.user?.id ?? "anonymous";
-      const timestamp = Date.now();
-      const fileName = `${userId}/voice_${timestamp}.m4a`;
-
       // expo-file-system modern File API veya legacy fallback
       let base64 = "";
       try {
@@ -168,28 +163,15 @@ export const VoiceRecorderSheet: React.FC<VoiceRecorderSheetProps> = ({
         });
       }
 
-      const fileBuffer = Buffer.from(base64, "base64");
+      const mediaUrl = await uploadVoiceMessage(base64, uploadTarget);
 
-      const { data, error } = await supabase.storage
-        .from("chat-media")
-        .upload(fileName, fileBuffer, {
-          contentType: "audio/m4a",
-          upsert: true,
-        });
-
-      if (error) throw new Error(error.message);
-
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from("chat-media").getPublicUrl(data.path);
-
-      onSend(publicUrl, durationSec);
+      onSend(mediaUrl, durationSec);
       reset();
       onClose();
     } catch {
       setPhase({ type: "error", message: t.voice.uploadFailed });
     }
-  }, [phase, onSend, reset, onClose, t]);
+  }, [phase, onSend, reset, onClose, t, uploadTarget]);
 
   const isRecording = phase.type === "recording" || recorderState.isRecording;
   const isPreview = phase.type === "preview";

@@ -6,6 +6,7 @@ import { MessageType, RoomMessage } from "../types/messages.types";
 import { MediaPickerSheet } from "./ui/MediaPickerSheet";
 import { VoiceRecorderSheet } from "./ui/VoiceRecorderSheet";
 import { LocationPickerSheet } from "./ui/LocationPickerSheet";
+import type { MediaUploadTarget } from "../api/storageApi";
 import { useTheme } from "../theme";
 import { tokens } from "../theme/tokens";
 import { useI18n } from "../i18n";
@@ -26,6 +27,8 @@ type ChatInputBarProps = {
   onError?: (errorMessage: string) => void;
   isSending?: boolean;
   placeholder?: string;
+  /** Fotoğraf/ses nereye yüklenecek (varsayılan: oda, public). DM'de private bucket kullanılır. */
+  uploadTarget?: MediaUploadTarget;
 };
 
 type AttachType = "image" | "audio" | "location";
@@ -39,6 +42,7 @@ const ChatInputBarComponent: React.FC<ChatInputBarProps> = ({
   onSendVoice,
   isSending,
   placeholder,
+  uploadTarget,
 }) => {
   const [text, setText] = useState("");
   const [showAttachMenu, setShowAttachMenu] = useState(false);
@@ -453,6 +457,7 @@ const ChatInputBarComponent: React.FC<ChatInputBarProps> = ({
       <MediaPickerSheet
         visible={showMediaPicker}
         onClose={() => setShowMediaPicker(false)}
+        uploadTarget={uploadTarget}
         onSend={(url, localUri, caption) => {
           checkAndTriggerCooldown();
           onSendMedia("image", url, localUri, caption);
@@ -463,6 +468,7 @@ const ChatInputBarComponent: React.FC<ChatInputBarProps> = ({
       <VoiceRecorderSheet
         visible={showVoiceRecorder}
         onClose={() => setShowVoiceRecorder(false)}
+        uploadTarget={uploadTarget}
         onSend={(url, durationSec) => {
           checkAndTriggerCooldown();
           onSendVoice(url, durationSec);

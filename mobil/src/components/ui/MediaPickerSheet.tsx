@@ -32,14 +32,16 @@ import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme';
 import { tokens } from '../../theme/tokens';
-import { uploadChatImage } from '../../api/storageApi';
+import { uploadChatImage, MediaUploadTarget } from '../../api/storageApi';
 import { useI18n } from '@/i18n';
 
 export type MediaPickerSheetProps = {
   visible: boolean;
   onClose: () => void;
-  /** Görsel yüklendikten sonra remote URL, local URI ve opsiyonel caption döner */
+  /** Görsel yüklendikten sonra remote URL (oda) veya private dosya yolu (DM), local URI ve opsiyonel caption döner */
   onSend: (imageUrl: string, localUri: string, caption?: string) => void;
+  /** Varsayılan: oda (public). DM için private bucket'a yüklenir. */
+  uploadTarget?: MediaUploadTarget;
 };
 
 type SheetState =
@@ -52,6 +54,7 @@ export const MediaPickerSheet: React.FC<MediaPickerSheetProps> = ({
   visible,
   onClose,
   onSend,
+  uploadTarget,
 }) => {
   const { colors, isDark } = useTheme();
   const { t } = useI18n();
@@ -131,7 +134,7 @@ export const MediaPickerSheet: React.FC<MediaPickerSheetProps> = ({
     setState({ phase: 'uploading', uri });
 
     try {
-      const url = await uploadChatImage(base64);
+      const url = await uploadChatImage(base64, uploadTarget);
       onSend(url, uri, caption.trim() || undefined);
       handleClose();
     } catch (err: unknown) {
@@ -143,7 +146,7 @@ export const MediaPickerSheet: React.FC<MediaPickerSheetProps> = ({
         message: err instanceof Error && err.message ? err.message : t.media.uploadFailed,
       });
     }
-  }, [state, onSend, handleClose, t]);
+  }, [state, onSend, handleClose, t, uploadTarget]);
 
   return (
     <Modal

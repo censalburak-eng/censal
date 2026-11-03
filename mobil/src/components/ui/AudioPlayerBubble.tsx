@@ -60,6 +60,8 @@ const AudioPlayerBubbleComponent: React.FC<AudioPlayerBubbleProps> = ({
   );
 
   const togglePlay = () => {
+    // Medya bağlantısı henüz hazır değilse (DM imzalı URL alınıyor) oynatma
+    if (!mediaPath) return;
     try {
       if (!isActivated) {
         setIsActivated(true);

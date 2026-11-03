@@ -38,6 +38,7 @@ import { tokens } from '../theme/tokens';
 import { useI18n } from '../i18n';
 import { fetchCallablePhone } from '@/api/messagesApi';
 import { requestNotificationPermissionAsync } from '../lib/notifications';
+import type { MediaUploadTarget } from '../api/storageApi';
 
 type DirectChatScreenProps = {
   conversationId: string;
@@ -66,6 +67,12 @@ export const DirectChatScreen: React.FC<DirectChatScreenProps> = ({ conversation
   const deleteMutation = useDeleteDirectMessage(conversationId);
   const clearChatMutation = useClearConversation(conversationId, user?.id);
   const deleteConversationMutation = useDeleteConversation(user?.id);
+
+  // DM fotoğraf/ses dosyaları herkese açık değil; konuşmaya özel private bucket'a yüklenir
+  const dmUploadTarget = useMemo<MediaUploadTarget>(
+    () => ({ kind: 'dm', conversationId }),
+    [conversationId]
+  );
 
   // Engelleme durumu
   const { data: blockedList = [] } = useBlockedUsers();
@@ -639,6 +646,7 @@ export const DirectChatScreen: React.FC<DirectChatScreenProps> = ({ conversation
             onSendVoice={handleSendVoice}
             placeholder={t.directChat.inputPlaceholder}
             isSending={sendMutation.isPending}
+            uploadTarget={dmUploadTarget}
           />
         )}
       </KeyboardAvoidingView>

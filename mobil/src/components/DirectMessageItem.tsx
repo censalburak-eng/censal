@@ -15,6 +15,7 @@ import { useTheme } from '../theme';
 import { useI18n } from '../i18n';
 import { ImageViewerModal } from './ui/ImageViewerModal';
 import { AudioPlayerBubble } from './ui/AudioPlayerBubble';
+import { useMediaUrl } from '../hooks/useMediaUrl';
 
 export type DirectMessageItemProps = {
   item: DirectMessage;
@@ -94,6 +95,10 @@ const DirectMessageItemComponent: React.FC<DirectMessageItemProps> = ({
 
   const cleanBody = item?.body ?? '';
   const idStr = String(item?.id ?? '');
+
+  // Fotoğraf/ses: private dm-media yolu ise imzalı URL'e çevrilir, eski mesajlardaki tam URL olduğu gibi kullanılır
+  const mediaKey = item.type === 'image' || item.type === 'audio' ? (item.media_key ?? item.body) : null;
+  const mediaUrl = useMediaUrl(mediaKey);
 
   const handleOpenLocation = () => {
     if (!item.lat || !item.lng) return;
@@ -234,11 +239,11 @@ const DirectMessageItemComponent: React.FC<DirectMessageItemProps> = ({
 
           {/* 1. GÖRSEL (IMAGE) */}
           {item.type === 'image' && (() => {
-            const imgSrc = item.media_key ?? item.body;
+            const imgSrc = mediaUrl ?? '';
             return (
               <View>
                 <ImageViewerModal
-                  visible={isImageModalVisible}
+                  visible={isImageModalVisible && !!mediaUrl}
                   imageUrl={imgSrc}
                   onClose={() => setIsImageModalVisible(false)}
                 />
@@ -259,7 +264,8 @@ const DirectMessageItemComponent: React.FC<DirectMessageItemProps> = ({
                   ]}
                 >
                   <Image
-                    source={{ uri: imgSrc }}
+                    // İmzalı URL saatlik değişse de önbellek dosya yoluna göre tutulur
+                    source={mediaUrl ? { uri: imgSrc, cacheKey: mediaKey ?? undefined } : null}
                     style={{ width: '100%', height: '100%' }}
                     contentFit="cover"
                     transition={200}
@@ -287,7 +293,7 @@ const DirectMessageItemComponent: React.FC<DirectMessageItemProps> = ({
           {item.type === 'audio' && (
             <View>
               <AudioPlayerBubble
-                mediaPath={item.media_key ?? item.body}
+                mediaPath={mediaUrl ?? ''}
                 durationSec={item.duration_sec}
                 isCurrentUser={isMe}
               />
