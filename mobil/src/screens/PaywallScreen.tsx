@@ -25,8 +25,8 @@ export const PaywallScreen: React.FC = () => {
   const { colors, isDark } = useTheme();
   const { t, isRTL } = useI18n();
   const { user, isAuthenticated } = useAuth();
-  const { settings, mockSubscribe, isSubscribing: isMockSubscribing, hasActiveSubscription } = useEntitlement(user?.id);
-  const { packages, purchase, restore, isPro, monthlyPriceString, yearlyPriceString } = useRevenueCat();
+  const { settings, hasActiveSubscription } = useEntitlement(user?.id);
+  const { packages, purchase, restore, refetchOfferings, isPro, monthlyPriceString, yearlyPriceString } = useRevenueCat();
   const [isProcessing, setIsProcessing] = useState(false);
   const { show: showModal, hide: hideModal, modalProps } = useModal();
 
@@ -101,42 +101,23 @@ export const PaywallScreen: React.FC = () => {
       if (Platform.OS === 'android') {
         const targetPackage = selectedPlan === 'yearly' ? packages.yearly : packages.monthly;
 
-        if (targetPackage) {
-          // Gerçek Google Play In-App Purchase
-          const result = await purchase(targetPackage);
-          if (result.userCancelled) {
-            setIsProcessing(false);
-            return;
-          }
-
-          if (result.success) {
-            showModal({
-              title: t.common.success,
-              message: t.paywall.subscribedSuccess,
-              actions: [
-                {
-                  label: t.common.ok,
-                  style: 'default',
-                  onPress: () => {
-                    hideModal();
-                    if (router.canGoBack()) {
-                      router.back();
-                    } else {
-                      router.replace('/');
-                    }
-                  },
-                },
-              ],
-            });
-            setIsProcessing(false);
-            return;
-          } else if (result.error) {
-            throw new Error(result.error.message);
-          }
+        // Mağaza paketi yüklenemediyse abonelik verilmez; paketler arka planda yeniden denenir
+        if (!targetPackage) {
+          refetchOfferings().catch(() => {});
+          throw new Error(t.paywall.storeUnavailable);
         }
 
-        // Mağaza paketi henüz canlıda değilse mock fallback
-        await mockSubscribe(selectedPlan);
+        // Gerçek Google Play In-App Purchase
+        const result = await purchase(targetPackage);
+        if (result.userCancelled) {
+          return;
+        }
+
+        if (!result.success) {
+          // Hata yoksa ödeme alınmış ama yetki henüz doğrulanamamış olabilir
+          throw new Error(result.error?.message ?? t.paywall.purchaseNotVerified);
+        }
+
         showModal({
           title: t.common.success,
           message: t.paywall.subscribedSuccess,
@@ -705,8 +686,8 @@ export const PaywallScreen: React.FC = () => {
             }
             icon={isPendingApproval ? 'time-outline' : 'arrow-forward'}
             iconPosition="right"
-            loading={isProcessing || isMockSubscribing}
-            disabled={!isAgreed || isProcessing || isMockSubscribing || isPendingApproval}
+            loading={isProcessing}
+            disabled={!isAgreed || isProcessing || isPendingApproval}
             onPress={handleSubscribe}
           />
 

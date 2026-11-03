@@ -158,6 +158,8 @@ export type TranslationStructure = {
     noActiveSubscription: string;
     restoreFailed: string;
     purchaseFailed: string;
+    storeUnavailable: string;
+    purchaseNotVerified: string;
     termsNotice: string;
     paymentNotice: string;
     lockedRoomNotice: string;

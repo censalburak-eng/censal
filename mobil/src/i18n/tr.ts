@@ -158,6 +158,8 @@ export const tr: TranslationStructure = {
     noActiveSubscription: 'Kayıtlı aktif bir abonelik bulunamadı.',
     restoreFailed: 'Geri yükleme başarısız',
     purchaseFailed: 'İşlem başarısız',
+    storeUnavailable: 'Mağazaya şu an ulaşılamıyor. Lütfen internet bağlantınızı kontrol edip tekrar deneyin.',
+    purchaseNotVerified: 'Satın alma doğrulanamadı. Ödeme alındıysa "Satın Alımları Geri Yükle" ile aboneliğinizi etkinleştirebilirsiniz.',
     termsNotice: 'Abonelik süresi bitiminde otomatik olarak yenilenir. İstediğiniz zaman hesap ayarlarınızdan iptal edebilirsiniz.',
     paymentNotice: 'Lansman dönemi boyunca tüm şehir odalarına ve özelliklere erişim ücretsizdir.',
     lockedRoomNotice: 'Bu şehir odası kilitlidir. Giriş yapabilmek için aktif bir aboneliğinizin olması gerekir.',

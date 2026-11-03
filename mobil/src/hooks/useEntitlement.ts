@@ -1,8 +1,7 @@
 import { Platform } from 'react-native';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { fetchAppSettings, getCachedAppSettings } from '../api/settingsApi';
-import { getActiveSubscription, createMockSubscription, subscriptionKeys, getUserPinnedListings, UserPinnedListingItem } from '../api/subscriptionApi';
-import { SubscriptionPlan } from '../types/settings.types';
+import { getActiveSubscription, subscriptionKeys, getUserPinnedListings, UserPinnedListingItem } from '../api/subscriptionApi';
 import { useRevenueCat } from './useRevenueCat';
 
 export const entitlementKeys = {
@@ -12,8 +11,6 @@ export const entitlementKeys = {
 };
 
 export const useEntitlement = (userId?: string) => {
-  const queryClient = useQueryClient();
-
   const settingsQuery = useQuery({
     queryKey: ['app_settings'],
     queryFn: fetchAppSettings,
@@ -38,16 +35,6 @@ export const useEntitlement = (userId?: string) => {
     queryFn: () => getActiveSubscription(userId),
     enabled: !!userId && !isFreeMode && !isPro && !isRevenueCatLoading,
     staleTime: 5 * 60 * 1000,
-  });
-
-  const mockSubscribeMutation = useMutation({
-    mutationFn: (plan: SubscriptionPlan) => {
-      if (!userId) throw new Error('Kullanıcı oturumu bulunamadı');
-      return createMockSubscription(userId, plan);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: subscriptionKeys.detail(userId) });
-    },
   });
 
   const hasDbSubscription = !subscriptionQuery.isError && !!subscriptionQuery.data;
@@ -76,8 +63,6 @@ export const useEntitlement = (userId?: string) => {
     packages,
     purchase,
     restore,
-    mockSubscribe: mockSubscribeMutation.mutateAsync,
-    isSubscribing: mockSubscribeMutation.isPending,
   };
 };
 

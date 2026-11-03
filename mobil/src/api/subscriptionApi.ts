@@ -104,33 +104,6 @@ export const getActiveSubscription = async (userId?: string): Promise<UserSubscr
   return data as UserSubscription | null;
 };
 
-export const createMockSubscription = async (
-  userId: string,
-  plan: SubscriptionPlan = 'monthly'
-): Promise<UserSubscription> => {
-  const durationDays = plan === 'yearly' ? 365 : 30;
-  const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + durationDays);
-
-  const { data, error } = await supabase
-    .from('subscriptions')
-    .insert({
-      user_id: userId,
-      plan,
-      source: 'mock',
-      status: 'active',
-      expires_at: expiresAt.toISOString(),
-    })
-    .select()
-    .single();
-
-  if (error) {
-    throw mapDatabaseError(error);
-  }
-
-  return data as UserSubscription;
-};
-
 // Mükerrer / çift senkronizasyonu önlemek için hafıza içi kilit
 let inFlightSyncPromise: Promise<UserSubscription | null> | null = null;
 let lastSyncedSignature = '';

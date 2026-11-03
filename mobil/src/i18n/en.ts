@@ -158,6 +158,8 @@ export const en: TranslationStructure = {
     noActiveSubscription: 'No active subscription found.',
     restoreFailed: 'Restore failed',
     purchaseFailed: 'Transaction failed',
+    storeUnavailable: 'The store is unavailable right now. Please check your connection and try again.',
+    purchaseNotVerified: 'The purchase could not be verified. If you were charged, use "Restore Purchases" to activate your subscription.',
     termsNotice: 'Subscriptions auto-renew at the end of each period. Cancel anytime via account settings.',
     paymentNotice: 'Access to all city rooms and features is complimentary during the launch period.',
     lockedRoomNotice: 'This city room is locked. An active subscription is required to join.',
