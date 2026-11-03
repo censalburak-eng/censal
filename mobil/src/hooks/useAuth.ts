@@ -3,6 +3,7 @@ import { User, Session } from '@supabase/supabase-js';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { supabase } from '../lib/supabase';
+import { queryClient } from '../lib/queryClient';
 import { signOut as authSignOut, signInWithGoogleOAuth, signInWithEmail, signUpWithEmail } from '../api/authApi';
 import { profileKeys } from './useProfile';
 import { getProfile } from '../api/profileApi';
@@ -57,6 +58,9 @@ supabase.auth.onAuthStateChange((event, session) => {
     cachedSession = null;
     cachedUser = null;
     isAuthInitialized = true;
+    // Hangi yoldan çıkılırsa çıkılsın (çıkış butonu, ban ekranı, hesap silme, geçersiz oturum)
+    // önceki kullanıcının profil, engel listesi, abonelik vb. önbelleği bir sonraki kullanıcıya kalmasın
+    queryClient.clear();
     listeners.forEach((fn) => fn(null));
     return;
   }

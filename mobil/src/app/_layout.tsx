@@ -21,7 +21,7 @@ import { usePresenceConnection } from '../hooks/usePresence';
 import { useNotifications } from '../hooks/useNotifications';
 import { useEntitlement } from '../hooks/useEntitlement';
 import { AnimatedSplash } from '../components/AnimatedSplash';
-import { initializeRevenueCat, logoutRevenueCatUser } from '../lib/purchases';
+import { initializeRevenueCat } from '../lib/purchases';
 import { setAudioModeAsync } from 'expo-audio';
 
 function AuthNavigationGate() {

@@ -66,6 +66,8 @@ export interface UseRevenueCatResult {
 
 // Modül düzeyinde önbellek - Tüm bileşenlerin aynı yükleme durumunu ve veriyi paylaşmasını sağlar
 let cachedCustomerInfo: CustomerInfo | null = null;
+// cachedCustomerInfo'nun hangi kullanıcıya ait olduğu (kullanıcı değişince önbellek sıfırlanır)
+let cachedCustomerInfoUserId: string | null = null;
 let cachedOfferings: PurchasesOfferings | null = null;
 let cachedPinProduct: PurchasesStoreProduct | null = null;
 let cachedMonthlyProduct: PurchasesStoreProduct | null = null;
@@ -88,6 +90,14 @@ export const useRevenueCat = (): UseRevenueCatResult => {
     if (Platform.OS !== 'android') {
       setIsLoading(false);
       return;
+    }
+
+    // Kullanıcı değiştiyse (çıkış / başka hesapla giriş) önceki kullanıcının satın alma bilgisini kullanma, yeniden çek
+    const currentUserId = user?.id ?? null;
+    if (cachedCustomerInfoUserId !== currentUserId) {
+      cachedCustomerInfo = null;
+      cachedCustomerInfoUserId = currentUserId;
+      force = true;
     }
 
     if (activeLoadPromise && !force) {
@@ -141,8 +151,9 @@ export const useRevenueCat = (): UseRevenueCatResult => {
 
       await activeLoadPromise;
 
+      // null da olabilir: kullanıcı değiştiyse eski bilgi ekrandan temizlenir
+      setCustomerInfo(cachedCustomerInfo);
       if (cachedCustomerInfo) {
-        setCustomerInfo(cachedCustomerInfo);
         if (user?.id && hasCensalProEntitlement(cachedCustomerInfo)) {
           syncRevenueCatSubscription(user.id, cachedCustomerInfo).catch(() => {});
         }

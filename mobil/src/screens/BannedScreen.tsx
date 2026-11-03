@@ -18,13 +18,12 @@ import { useBanAppeals } from '../hooks/useBanAppeals';
 import { useTheme } from '../theme';
 import { tokens } from '../theme/tokens';
 import { useI18n } from '../i18n';
-import { supabase } from '../lib/supabase';
 import { AppModal } from '../components/ui';
 import { useModal } from '../hooks/useModal';
 import { SupportContactModal } from '../components/SupportContactModal';
 
 export const BannedScreen: React.FC = () => {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const { data: profile } = useProfile(user?.id);
   const { latestAppeal, appeals, sendAppeal, isSending } = useBanAppeals();
   const { colors, isDark } = useTheme();
@@ -71,7 +70,7 @@ export const BannedScreen: React.FC = () => {
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await signOut();
   };
 
   const formattedDate = profile?.banned_at

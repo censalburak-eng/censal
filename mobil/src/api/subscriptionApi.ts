@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import { CustomerInfo } from 'react-native-purchases';
+import Purchases, { CustomerInfo } from 'react-native-purchases';
 import { supabase } from '../lib/supabase';
 import { UserSubscription, SubscriptionPlan } from '../types/settings.types';
 import { mapDatabaseError } from '../lib/errors';
@@ -119,6 +119,15 @@ export const syncRevenueCatSubscription = async (
   customerInfo: CustomerInfo
 ): Promise<UserSubscription | null> => {
   if (!userId) return null;
+
+  // RevenueCat SDK henüz bu kullanıcıya geçmediyse (Purchases.logIn tamamlanmadan) gelen bilgi
+  // önceki kullanıcıya ait olabilir; yanlış hesaba abonelik yazmamak için senkronizasyonu atla
+  try {
+    const currentAppUserId = await Purchases.getAppUserID();
+    if (currentAppUserId !== userId) return null;
+  } catch {
+    return null;
+  }
 
   const proEntitlement = customerInfo.entitlements.active['censal_pro'];
   if (!proEntitlement || !proEntitlement.isActive) {

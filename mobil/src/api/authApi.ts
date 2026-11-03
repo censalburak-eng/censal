@@ -2,6 +2,8 @@ import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 import { supabase } from '../lib/supabase';
 import { mapAuthError, AppError } from '../lib/errors';
+import { clearPushTokenFromSupabase } from '../lib/notifications';
+import { logoutRevenueCatUser } from '../lib/purchases';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -15,6 +17,14 @@ export const getCurrentUser = async () => {
 };
 
 export const signOut = async (): Promise<void> => {
+  // Oturum hâlâ geçerliyken bu cihazı önceki kullanıcıdan ayır:
+  // push token silinmezse aynı telefonda giriş yapan bir sonraki kişi, öncekinin bildirimlerini alır
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session?.user?.id) {
+    await clearPushTokenFromSupabase(session.user.id);
+  }
+  await logoutRevenueCatUser();
+
   const { error } = await supabase.auth.signOut();
   if (error) {
     throw mapAuthError(error);
