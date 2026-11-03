@@ -5,7 +5,7 @@ import {
   SendDirectMessageInput,
   BlockedUser,
 } from '../types/directMessages.types';
-import { mapDatabaseError } from '../lib/errors';
+import { mapDatabaseError, AppError } from '../lib/errors';
 import { CITIES_DATA } from '../data/cities';
 import { logger } from '../lib/logger';
 
@@ -108,7 +108,7 @@ export const getOrCreateConversation = async (
   if (error) {
     log.error('getOrCreateConversation HATA:', error.message, error.code, error.details);
     if (error.message?.includes('BLOCKED')) {
-      throw new Error('Bu kullanıcıyla engelleme nedeniyle mesajlaşamazsınız.');
+      throw new AppError('DM_BLOCKED', 'Bu kullanıcıyla engelleme nedeniyle mesajlaşamazsınız.', error);
     }
     throw mapDatabaseError(error);
   }
@@ -464,10 +464,10 @@ export const sendDirectMessage = async (
   if (error) {
     log.error('sendDirectMessage HATA:', error.message, error.code, error.details);
     if (error.message?.includes('BLOCKED')) {
-      throw new Error('Bu kullanıcıya engelleme sebebiyle mesaj gönderemezsiniz.');
+      throw new AppError('DM_BLOCKED', 'Bu kullanıcıya engelleme sebebiyle mesaj gönderemezsiniz.', error);
     }
     if (error.message?.includes('hızlı')) {
-      throw new Error('Lütfen mesaj göndermeden önce 1 saniye bekleyin.');
+      throw new AppError('RATE_LIMITED', 'Lütfen mesaj göndermeden önce 1 saniye bekleyin.', error);
     }
     throw mapDatabaseError(error);
   }

@@ -34,6 +34,7 @@ import { useTheme } from '../../theme';
 import { tokens } from '../../theme/tokens';
 import { uploadChatImage, MediaUploadTarget } from '../../api/storageApi';
 import { useI18n } from '@/i18n';
+import { getErrorText } from '@/lib/errors';
 
 export type MediaPickerSheetProps = {
   visible: boolean;
@@ -142,8 +143,7 @@ export const MediaPickerSheet: React.FC<MediaPickerSheetProps> = ({
       setState({
         phase: 'error',
         uri,
-        // Sunucudan gelen anlamlı hata mesajını koru
-        message: err instanceof Error && err.message ? err.message : t.media.uploadFailed,
+        message: getErrorText(err, t, t.media.uploadFailed),
       });
     }
   }, [state, onSend, handleClose, t, uploadTarget]);

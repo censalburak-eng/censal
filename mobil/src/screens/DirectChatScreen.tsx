@@ -39,6 +39,8 @@ import { useI18n } from '../i18n';
 import { fetchCallablePhone } from '@/api/messagesApi';
 import { requestNotificationPermissionAsync } from '../lib/notifications';
 import type { MediaUploadTarget } from '../api/storageApi';
+import { getErrorText } from '../lib/errors';
+import { localizeMessagePlaceholder } from '../i18n/placeholders';
 
 type DirectChatScreenProps = {
   conversationId: string;
@@ -112,8 +114,8 @@ export const DirectChatScreen: React.FC<DirectChatScreenProps> = ({ conversation
 
   const showError = useCallback(
     (err: unknown) =>
-      showInfo(t.common.error, err instanceof Error && err.message ? err.message : t.errors.unknown),
-    [showInfo, t.common.error, t.errors.unknown]
+      showInfo(t.common.error, getErrorText(err, t, t.errors.unknown)),
+    [showInfo, t]
   );
 
   // Yeni mesaj geldiğinde listeyi aşağı kaydır
@@ -160,7 +162,7 @@ export const DirectChatScreen: React.FC<DirectChatScreenProps> = ({ conversation
         onError: (err) =>
           showInfo(
             t.directChat.sendFailedTitle,
-            err instanceof Error && err.message ? err.message : t.errors.unknown
+            getErrorText(err, t, t.errors.unknown)
           ),
       }
     );
@@ -190,7 +192,7 @@ export const DirectChatScreen: React.FC<DirectChatScreenProps> = ({ conversation
         onError: (err) =>
           showInfo(
             t.directChat.sendFailedTitle,
-            err instanceof Error && err.message ? err.message : t.errors.unknown
+            getErrorText(err, t, t.errors.unknown)
           ),
       }
     );
@@ -220,7 +222,7 @@ export const DirectChatScreen: React.FC<DirectChatScreenProps> = ({ conversation
         onError: (err) =>
           showInfo(
             t.directChat.sendFailedTitle,
-            err instanceof Error && err.message ? err.message : t.errors.unknown
+            getErrorText(err, t, t.errors.unknown)
           ),
       }
     );
@@ -250,7 +252,7 @@ export const DirectChatScreen: React.FC<DirectChatScreenProps> = ({ conversation
         onError: (err) =>
           showInfo(
             t.directChat.sendFailedTitle,
-            err instanceof Error && err.message ? err.message : t.errors.unknown
+            getErrorText(err, t, t.errors.unknown)
           ),
       }
     );
@@ -339,7 +341,7 @@ export const DirectChatScreen: React.FC<DirectChatScreenProps> = ({ conversation
 
       showModal({
         title: t.directChat.userActionsTitle,
-        message: previewText || '',
+        message: localizeMessagePlaceholder(previewText, t),
         actions,
       });
     },

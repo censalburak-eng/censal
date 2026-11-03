@@ -7,6 +7,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { tokens } from '../theme/tokens';
 import { useTheme } from '../theme';
 import { useI18n } from '../i18n';
+import { getErrorText } from '../lib/errors';
 import { useEntitlement } from '../hooks/useEntitlement';
 import { useAuth } from '../hooks/useAuth';
 import { useRevenueCat } from '../hooks/useRevenueCat';
@@ -163,7 +164,7 @@ export const PaywallScreen: React.FC = () => {
     } catch (err: unknown) {
       showModal({
         title: t.common.error,
-        message: err instanceof Error ? err.message : t.paywall.purchaseFailed,
+        message: getErrorText(err, t, t.paywall.purchaseFailed),
         actions: [{ label: t.common.ok, style: 'default', onPress: hideModal }],
       });
     } finally {
@@ -191,7 +192,7 @@ export const PaywallScreen: React.FC = () => {
     } catch (err: unknown) {
       showModal({
         title: t.common.error,
-        message: err instanceof Error ? err.message : t.paywall.restoreFailed,
+        message: getErrorText(err, t, t.paywall.restoreFailed),
         actions: [{ label: t.common.ok, style: 'default', onPress: hideModal }],
       });
     } finally {

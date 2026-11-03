@@ -1,11 +1,26 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
+import { useAudioPlayer, useAudioPlayerStatus, AudioPlayer } from 'expo-audio';
 import { useTheme } from '../../theme';
 import { tokens } from '../../theme/tokens';
 
 const SPEEDS = [1.0, 1.5, 2.0];
+
+// Aynı anda yalnızca tek bir sesli mesaj çalsın: yeni bir mesaj başlayınca öncekini durdur
+let activePlayer: AudioPlayer | null = null;
+
+function playExclusive(player: AudioPlayer) {
+  if (activePlayer && activePlayer !== player) {
+    try {
+      activePlayer.pause();
+    } catch {
+      // Önceki oynatıcı zaten serbest bırakılmış olabilir
+    }
+  }
+  activePlayer = player;
+  player.play();
+}
 
 function formatDuration(sec: number | null | undefined): string {
   if (!sec || isNaN(sec)) return '0:00';
@@ -49,10 +64,31 @@ const AudioPlayerBubbleComponent: React.FC<AudioPlayerBubbleProps> = ({
   isCurrentUser,
 }) => {
   const { colors, isDark } = useTheme();
+  // Kaynak, ilk dokunuşta yüklenir (listede onlarca oynatıcı açılmasın diye)
   const [isActivated, setIsActivated] = useState(false);
   const player = useAudioPlayer(isActivated ? mediaPath : null);
   const status = useAudioPlayerStatus(player);
   const [speedIndex, setSpeedIndex] = useState(0);
+  const playRequestedRef = useRef(false);
+
+  // İlk dokunuşta kaynak değişince expo-audio yeni bir oynatıcı oluşturur;
+  // çalma isteği, yeni oynatıcı sesi yükledikten sonra o oynatıcıya verilir
+  useEffect(() => {
+    if (!isActivated || !status.isLoaded || !playRequestedRef.current) return;
+    playRequestedRef.current = false;
+    try {
+      playExclusive(player);
+    } catch (e) {
+      console.warn('[AudioPlayerBubble] Oynatma hatası:', e);
+    }
+  }, [isActivated, status.isLoaded, player]);
+
+  // Bileşen kaldırılınca aktif oynatıcı referansını temizle
+  useEffect(() => {
+    return () => {
+      if (activePlayer === player) activePlayer = null;
+    };
+  }, [player]);
 
   const waveformBars = useMemo(
     () => generateWaveformBars(mediaPath, 26),
@@ -64,12 +100,8 @@ const AudioPlayerBubbleComponent: React.FC<AudioPlayerBubbleProps> = ({
     if (!mediaPath) return;
     try {
       if (!isActivated) {
+        playRequestedRef.current = true;
         setIsActivated(true);
-        setTimeout(() => {
-          try {
-            player.play();
-          } catch {}
-        }, 120);
         return;
       }
 
@@ -79,7 +111,7 @@ const AudioPlayerBubbleComponent: React.FC<AudioPlayerBubbleProps> = ({
         if (status.duration && status.currentTime >= status.duration) {
           player.seekTo(0);
         }
-        player.play();
+        playExclusive(player);
       }
     } catch (e) {
       console.warn('[AudioPlayerBubble] Oynatma hatası:', e);

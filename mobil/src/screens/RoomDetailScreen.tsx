@@ -44,6 +44,7 @@ import { requestNotificationPermissionAsync } from "../lib/notifications";
 import { useTheme } from "../theme";
 import { tokens } from "../theme/tokens";
 import { useI18n } from "../i18n";
+import { getErrorText } from "../lib/errors";
 import { fetchCallablePhone } from "@/api/messagesApi";
 
 type RoomDetailScreenProps = {
@@ -163,7 +164,7 @@ export const RoomDetailScreen: React.FC<RoomDetailScreenProps> = ({ roomId }) =>
     });
 
   const showError = (err: unknown, fallback: string) =>
-    showInfo(t.common.error, err instanceof Error && err.message ? err.message : fallback);
+    showInfo(t.common.error, getErrorText(err, t, fallback));
 
   const handleCallUser = async (message: RoomMessage) => {
     if (message.isUserPhoneHidden) return;
@@ -226,7 +227,7 @@ export const RoomDetailScreen: React.FC<RoomDetailScreenProps> = ({ roomId }) =>
     : t.common.user;
 
   const handleSendError = useCallback((err: unknown) => {
-    const msg = err instanceof Error ? err.message : t.errors.unknown;
+    const msg = getErrorText(err, t, t.errors.unknown);
     showModal({
       title: t.common.error,
       message: msg,
@@ -432,7 +433,7 @@ export const RoomDetailScreen: React.FC<RoomDetailScreenProps> = ({ roomId }) =>
               setPinningMessage(null);
               showInfo(
                 t.roomDetail.warning,
-                err instanceof Error && err.message ? err.message : t.errors.pinQuotaFull
+                getErrorText(err, t, t.errors.pinQuotaFull)
               );
             },
           }
@@ -448,7 +449,7 @@ export const RoomDetailScreen: React.FC<RoomDetailScreenProps> = ({ roomId }) =>
       setPinningMessage(null);
       showInfo(
         t.common.error,
-        err instanceof Error && err.message ? err.message : 'Ödeme talebi oluşturulamadı'
+        getErrorText(err, t, t.errors.paymentRequestFailed)
       );
     } finally {
       setIsPurchasingPin(false);
@@ -498,7 +499,7 @@ export const RoomDetailScreen: React.FC<RoomDetailScreenProps> = ({ roomId }) =>
       onError: (err) =>
         showInfo(
           t.roomDetail.dmFailedTitle,
-          err instanceof Error && err.message ? err.message : t.errors.unknown
+          getErrorText(err, t, t.errors.unknown)
         ),
     });
   }, [user?.id, router, startConversationMutation, t, language]);
@@ -765,7 +766,7 @@ export const RoomDetailScreen: React.FC<RoomDetailScreenProps> = ({ roomId }) =>
         ) : isError ? (
           <ErrorView
             title={t.roomDetail.loadFailed}
-            subtitle={error instanceof Error ? error.message : undefined}
+            subtitle={error ? getErrorText(error, t, t.errors.unknown) : undefined}
             onRetry={() => refetch()}
           />
         ) : (

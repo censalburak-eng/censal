@@ -204,6 +204,12 @@ export type TranslationStructure = {
     unknown: string;
     database: string;
     invalidEmail: string;
+    dmBlocked: string;
+    accountBanned: string;
+    pinNotOwner: string;
+    pinAlreadyPinned: string;
+    appealLimitExceeded: string;
+    paymentRequestFailed: string;
   };
   accessibility: {
     roomItem: (name: string, plate: string) => string;
@@ -339,6 +345,12 @@ export type TranslationStructure = {
     deleteUserTitle: string;
     deleteUserConfirm: string;
     deleteUserSuccess: string;
+    you: string;
+    messageLabel: string;
+    tapToStart: string;
+    minutesAgo: (minutes: number) => string;
+    todayAt: (time: string) => string;
+    yesterdayAt: (time: string) => string;
   };
   profileScreen: {
     title: string; sectionTitle: string;
@@ -377,6 +389,11 @@ export type TranslationStructure = {
     adminReplyTitle: string;
     contactSupportEmail: string;
     logoutButton: string;
+    appealTooShortTitle: string;
+    appealTooShortMessage: string;
+    appealSentTitle: string;
+    appealFailedTitle: string;
+    appealFailedMessage: string;
   };
   citySelect: {
     title: string;

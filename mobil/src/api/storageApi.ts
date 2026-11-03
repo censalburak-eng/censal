@@ -1,5 +1,6 @@
 import { Buffer } from 'buffer';
 import { supabase } from '../lib/supabase';
+import { AppError } from '../lib/errors';
 
 /** DM medyası için özel (private) bucket. Dosyalar yalnızca imzalı URL ile okunabilir. */
 export const DM_MEDIA_BUCKET = 'dm-media';
@@ -40,7 +41,7 @@ const getCurrentUserId = async (): Promise<string> => {
 
   const userId = session?.user?.id;
   if (!userId) {
-    throw new Error('Oturum bulunamadı. Lütfen tekrar giriş yapın.');
+    throw new AppError('UNAUTHORIZED', 'Oturum bulunamadı. Lütfen tekrar giriş yapın.');
   }
   return userId;
 };
@@ -72,7 +73,8 @@ export async function uploadImage({
 
   if (error) {
     console.error('[Storage] Yükleme hatası:', error.message);
-    throw new Error('Görsel sunucuya yüklenemedi: ' + error.message);
+    // UNKNOWN: ekran kendi çevrilmiş "yüklenemedi" metnini gösterir
+    throw new AppError('UNKNOWN', 'Görsel sunucuya yüklenemedi: ' + error.message, error);
   }
 
   // 3. Public URL al
@@ -107,7 +109,7 @@ async function uploadDirectMessageMedia(
 
   if (error) {
     console.error('[Storage] DM medya yükleme hatası:', error.message);
-    throw new Error('Dosya sunucuya yüklenemedi: ' + error.message);
+    throw new AppError('UNKNOWN', 'Dosya sunucuya yüklenemedi: ' + error.message, error);
   }
 
   return data.path;
@@ -122,7 +124,7 @@ export async function getDirectMessageMediaUrl(path: string): Promise<string> {
     .createSignedUrl(path, DM_SIGNED_URL_TTL_SEC);
 
   if (error || !data?.signedUrl) {
-    throw new Error(error?.message ?? 'Medya bağlantısı oluşturulamadı.');
+    throw new AppError('UNKNOWN', error?.message ?? 'Medya bağlantısı oluşturulamadı.', error);
   }
   return data.signedUrl;
 }
@@ -179,7 +181,7 @@ export async function uploadVoiceMessage(
       upsert: false,
     });
 
-  if (error) throw new Error(error.message);
+  if (error) throw new AppError('UNKNOWN', error.message, error);
 
   const {
     data: { publicUrl },

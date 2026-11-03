@@ -16,6 +16,7 @@ import { useI18n } from '../i18n';
 import { ImageViewerModal } from './ui/ImageViewerModal';
 import { AudioPlayerBubble } from './ui/AudioPlayerBubble';
 import { useMediaUrl } from '../hooks/useMediaUrl';
+import { localizeMessagePlaceholder } from '../i18n/placeholders';
 
 export type DirectMessageItemProps = {
   item: DirectMessage;
@@ -222,7 +223,7 @@ const DirectMessageItemComponent: React.FC<DirectMessageItemProps> = ({
                   marginBottom: 1,
                 }}
               >
-                {item.replyToMessage.userName}
+                {localizeMessagePlaceholder(item.replyToMessage.userName, t)}
               </Text>
               <Text
                 style={{
@@ -232,7 +233,7 @@ const DirectMessageItemComponent: React.FC<DirectMessageItemProps> = ({
                 }}
                 numberOfLines={2}
               >
-                {item.replyToMessage.body}
+                {localizeMessagePlaceholder(item.replyToMessage.body, t)}
               </Text>
             </View>
           )}

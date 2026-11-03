@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { mapDatabaseError } from '../lib/errors';
+import { mapDatabaseError, AppError } from '../lib/errors';
 
 export type BanAppeal = {
   id: string;
@@ -23,7 +23,7 @@ export const banAppealApi = {
 
     if (error) {
       if (error.message?.includes('APPEAL_LIMIT_EXCEEDED')) {
-        throw new Error('Maksimum 2 itiraz hakkınızı doldurdunuz. Yeni bir itiraz mesajı gönderemezsiniz.');
+        throw new AppError('APPEAL_LIMIT_EXCEEDED', 'Maksimum 2 itiraz hakkınızı doldurdunuz. Yeni bir itiraz mesajı gönderemezsiniz.', error);
       }
       throw mapDatabaseError(error);
     }

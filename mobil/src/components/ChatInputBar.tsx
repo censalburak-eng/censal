@@ -10,6 +10,7 @@ import type { MediaUploadTarget } from "../api/storageApi";
 import { useTheme } from "../theme";
 import { tokens } from "../theme/tokens";
 import { useI18n } from "../i18n";
+import { localizeMessagePlaceholder } from "../i18n/placeholders";
 
 export type ChatReplyTarget = {
   id: string;
@@ -270,13 +271,13 @@ const ChatInputBarComponent: React.FC<ChatInputBarProps> = ({
                   fontWeight: tokens.typography.fontWeight.bold,
                 }}
               >
-                {t.chat.replyTo(replyingTo.userName)}
+                {t.chat.replyTo(localizeMessagePlaceholder(replyingTo.userName, t))}
               </Text>
               <Text
                 style={{ color: colors.muted, fontSize: tokens.moderateScale(11) }}
                 numberOfLines={1}
               >
-                {replyingTo.body}
+                {localizeMessagePlaceholder(replyingTo.body, t)}
               </Text>
             </View>
             <Pressable onPress={onCancelReply} hitSlop={8}>

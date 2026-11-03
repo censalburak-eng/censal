@@ -2,7 +2,7 @@ import { useEffect, useCallback, useMemo, useSyncExternalStore } from 'react';
 import { AppState } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { touchLastSeen } from '../api/directMessagesApi';
-import { useI18n } from '../i18n';
+import { useI18n, TranslationStructure } from '../i18n';
 import { logger } from '../lib/logger';
 
 const log = logger.scope('usePresence');
@@ -231,14 +231,15 @@ export const useGlobalPresence = (userId?: string, roomId?: number | null) => {
  */
 export const formatLastSeenTime = (
   dateStr: string | null | undefined,
+  t: TranslationStructure,
   locale = 'tr-TR',
   isOnline = false
 ): string => {
   if (isOnline) {
-    return 'Çevrim içi';
+    return t.directChat.online;
   }
   if (!dateStr) {
-    return 'Çevrim dışı';
+    return t.directChat.offline;
   }
 
   const date = new Date(dateStr);
@@ -248,12 +249,12 @@ export const formatLastSeenTime = (
 
   // 2 dakikadan azsa çevrim içi kabul edilir
   if (diffMins < 2) {
-    return 'Çevrim içi';
+    return t.directChat.online;
   }
 
   // 60 dakikadan azsa
   if (diffMins < 60) {
-    return `${diffMins} dk önce`;
+    return t.directChat.minutesAgo(diffMins);
   }
 
   const isToday =
@@ -267,7 +268,7 @@ export const formatLastSeenTime = (
   });
 
   if (isToday) {
-    return `Bugün ${timePart}`;
+    return t.directChat.todayAt(timePart);
   }
 
   const yesterday = new Date(now);
@@ -278,7 +279,7 @@ export const formatLastSeenTime = (
     date.getFullYear() === yesterday.getFullYear();
 
   if (isYesterday) {
-    return `Dün ${timePart}`;
+    return t.directChat.yesterdayAt(timePart);
   }
 
   // Aynı yıl içindeyse gün ve ay
@@ -323,8 +324,8 @@ export const useUserPresence = (targetUserId?: string, lastSeenAt?: string | nul
       return t.directChat.offline;
     }
 
-    const formatted = formatLastSeenTime(lastSeenAt, locale, false);
-    if (formatted === 'Çevrim içi') {
+    const formatted = formatLastSeenTime(lastSeenAt, t, locale, false);
+    if (formatted === t.directChat.online) {
       return t.directChat.online;
     }
     return t.directChat.lastSeen(formatted);

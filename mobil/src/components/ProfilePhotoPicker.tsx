@@ -6,6 +6,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { tokens } from '../theme/tokens';
 import { useTheme } from '../theme';
 import { useI18n } from '@/i18n';
+import { getErrorText } from '@/lib/errors';
 import { uploadAvatarImage } from '../api/storageApi';
 
 import { ImageViewerModal } from './ui/ImageViewerModal';
@@ -71,7 +72,7 @@ export const ProfilePhotoPicker: React.FC<ProfilePhotoPickerProps> = ({
     } catch (err: unknown) {
       console.error('[ProfilePhotoPicker] Yükleme hatası:', err);
       setPreviewUri(avatarUrl ?? null);
-      onError?.(err instanceof Error ? err.message : t.profile.uploadFailed);
+      onError?.(getErrorText(err, t, t.profile.uploadFailed));
     } finally {
       isUploadingRef.current = false;
       setIsUploading(false);

@@ -11,6 +11,7 @@ import { AppModal, BackButton, LoadingView, ErrorView } from '../components/ui';
 import { tokens } from '../theme/tokens';
 import { useTheme } from '../theme';
 import { useI18n } from '../i18n';
+import { getErrorText } from '../lib/errors';
 
 import { ProfileHeroCard } from '../components/ProfileHeroCard';
 import { ProfileMenuGroup, ProfileMenuItemData } from '../components/ProfileMenuGroup';
@@ -161,7 +162,7 @@ export const ProfileScreen: React.FC = () => {
               onError: (err) =>
                 showInfo(
                   t.common.error,
-                  err instanceof Error && err.message ? err.message : t.profileScreen.deleteFailed
+                  getErrorText(err, t, t.profileScreen.deleteFailed)
                 ),
             });
           },

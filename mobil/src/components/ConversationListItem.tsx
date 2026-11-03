@@ -6,6 +6,7 @@ import { tokens } from '../theme/tokens';
 import { useTheme } from '../theme';
 import { Badge, PlateBadge } from './ui';
 import { useI18n } from '../i18n';
+import { localizeMessagePlaceholder } from '../i18n/placeholders';
 
 type ConversationListItemProps = {
   item: Conversation;
@@ -15,10 +16,10 @@ type ConversationListItemProps = {
 
 const ConversationListItemComponent: React.FC<ConversationListItemProps> = ({ item, onPress, onLongPress }) => {
   const { colors } = useTheme();
-  const { isRTL, language } = useI18n();
+  const { t, isRTL } = useI18n();
 
   const other = item.otherUser;
-  const fullName = other ? `${other.first_name} ${other.last_name}`.trim() : 'Kullanıcı';
+  const fullName = other ? `${other.first_name} ${other.last_name}`.trim() : t.common.user;
   const initials = fullName
     .split(' ')
     .map((p) => p[0])
@@ -128,7 +129,7 @@ const ConversationListItemComponent: React.FC<ConversationListItemProps> = ({ it
             }}
             numberOfLines={1}
           >
-            {item.lastMessageSnippet || (language === 'tr' ? 'Mesajlaşmayı başlatmak için dokunun' : 'انقر لبدء المراسلة.')}
+            {item.lastMessageSnippet ? localizeMessagePlaceholder(item.lastMessageSnippet, t) : t.directChat.tapToStart}
           </Text>
 
           <Badge count={item.unreadCount} variant="danger" size="sm" />

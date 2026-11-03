@@ -14,6 +14,7 @@ import { BlockedUser } from '../types/directMessages.types';
 import { useTheme } from '../theme';
 import { tokens } from '../theme/tokens';
 import { useI18n } from '../i18n';
+import { getErrorText } from '../lib/errors';
 import { BackButton, AppModal, LoadingView, ErrorView, EmptyView } from '../components/ui';
 import { useModal } from '../hooks/useModal';
 import { Image } from 'expo-image';
@@ -49,7 +50,7 @@ export const BlockedUsersScreen: React.FC = () => {
               onError: (err) =>
                 showModal({
                   title: t.common.error,
-                  message: err instanceof Error && err.message ? err.message : t.errors.unknown,
+                  message: getErrorText(err, t, t.errors.unknown),
                   actions: [{ label: t.common.ok, style: 'default', onPress: hideModal }],
                 }),
             });

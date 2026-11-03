@@ -170,7 +170,7 @@ export const PhoneInputScreen: React.FC = () => {
                     textAlign: 'center',
                   }}
                 >
-                  Hızlı ve Güvenli Giriş
+                  {t.auth.cardTitle}
                 </Text>
                 <Text
                   style={{
@@ -179,7 +179,7 @@ export const PhoneInputScreen: React.FC = () => {
                     textAlign: 'center',
                   }}
                 >
-                  Devam etmek için bir hesap seçin
+                  {t.auth.cardSubtitle}
                 </Text>
               </View>
             )}
@@ -507,7 +507,7 @@ export const PhoneInputScreen: React.FC = () => {
                   fontWeight: tokens.typography.fontWeight.semibold,
                 }}
               >
-                Yardım & Canlı Destek
+                {t.profileScreen.support}
               </Text>
               <Text style={{ color: colors.muted, fontSize: tokens.moderateScale(11) }}>
                 • WhatsApp & E-posta

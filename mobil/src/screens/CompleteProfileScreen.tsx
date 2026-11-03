@@ -18,6 +18,7 @@ import { ProfilePhotoPicker } from '../components/ProfilePhotoPicker';
 import { tokens } from '../theme/tokens';
 import { useTheme } from '../theme';
 import { useI18n } from '../i18n';
+import { getErrorText } from '../lib/errors';
 import { CITIES_DATA } from '../data/cities';
 import { AppButton } from '../components/ui';
 import { AppTextInput } from '../components/ui/AppInput';
@@ -165,7 +166,7 @@ export const CompleteProfileScreen: React.FC = () => {
         router.replace('/(auth)/phone');
         return;
       }
-      setError(errMsg);
+      setError(getErrorText(err, t, t.profile.saveFailed));
     } finally {
       isSavingRef.current = false;
     }

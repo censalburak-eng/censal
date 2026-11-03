@@ -18,6 +18,7 @@ import { useBanAppeals } from '../hooks/useBanAppeals';
 import { useTheme } from '../theme';
 import { tokens } from '../theme/tokens';
 import { useI18n } from '../i18n';
+import { getErrorText } from '../lib/errors';
 import { AppModal } from '../components/ui';
 import { useModal } from '../hooks/useModal';
 import { SupportContactModal } from '../components/SupportContactModal';
@@ -37,9 +38,9 @@ export const BannedScreen: React.FC = () => {
   const handleSendAppeal = async () => {
     if (message.trim().length < 10) {
       showModal({
-        title: 'Eksik Bilgi',
-        message: 'Lütfen yöneticilere durumunuzu açıklayan en az 10 karakterlik bir mesaj yazınız.',
-        actions: [{ label: 'Tamam', style: 'default', onPress: hideModal }],
+        title: t.bannedScreen.appealTooShortTitle,
+        message: t.bannedScreen.appealTooShortMessage,
+        actions: [{ label: t.common.ok, style: 'default', onPress: hideModal }],
       });
       return;
     }
@@ -52,15 +53,15 @@ export const BannedScreen: React.FC = () => {
       setMessage('');
       setSuccessNotice(true);
       showModal({
-        title: 'İtirazınız İletildi',
+        title: t.bannedScreen.appealSentTitle,
         message: t.bannedScreen.appealSentSuccess,
-        actions: [{ label: 'Tamam', style: 'default', onPress: hideModal }],
+        actions: [{ label: t.common.ok, style: 'default', onPress: hideModal }],
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       showModal({
-        title: 'Gönderilemedi',
-        message: err.message || 'Mesaj iletilirken bir hata oluştu. Lütfen tekrar deneyiniz.',
-        actions: [{ label: 'Kapat', style: 'cancel', onPress: hideModal }],
+        title: t.bannedScreen.appealFailedTitle,
+        message: getErrorText(err, t, t.bannedScreen.appealFailedMessage),
+        actions: [{ label: t.common.close, style: 'cancel', onPress: hideModal }],
       });
     }
   };

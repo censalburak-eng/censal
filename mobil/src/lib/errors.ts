@@ -10,6 +10,11 @@ export type AppErrorCode =
   | 'NOT_FOUND'
   | 'CANCELLED'
   | 'INVALID_EMAIL'
+  | 'DM_BLOCKED'
+  | 'ACCOUNT_BANNED'
+  | 'PIN_NOT_OWNER'
+  | 'PIN_ALREADY_PINNED'
+  | 'APPEAL_LIMIT_EXCEEDED'
   | 'UNKNOWN';
 
 export class AppError extends Error {
@@ -33,7 +38,27 @@ export const errorCodeToTranslationKey: Record<AppErrorCode, keyof TranslationSt
   NOT_FOUND: 'notFound',
   CANCELLED: 'cancelled',
   INVALID_EMAIL: 'invalidEmail',
+  DM_BLOCKED: 'dmBlocked',
+  ACCOUNT_BANNED: 'accountBanned',
+  PIN_NOT_OWNER: 'pinNotOwner',
+  PIN_ALREADY_PINNED: 'pinAlreadyPinned',
+  APPEAL_LIMIT_EXCEEDED: 'appealLimitExceeded',
   UNKNOWN: 'unknown',
+};
+
+/**
+ * Ekranda gösterilecek hata metni:
+ * - AppError → kullanıcının dilinde çeviri (UNKNOWN ise ekranın kendi bağlamsal `fallback` metni)
+ * - Diğer hatalar → mesajı varsa mesajı (mağaza SDK'sı veya zaten çevrilmiş metinler), yoksa `fallback`
+ * API katmanındaki Türkçe hata mesajları yalnızca log içindir, kullanıcıya doğrudan gösterilmez.
+ */
+export const getErrorText = (error: unknown, t: TranslationStructure, fallback: string): string => {
+  if (error instanceof AppError) {
+    if (error.code === 'UNKNOWN') return fallback;
+    return t.errors[errorCodeToTranslationKey[error.code]] ?? fallback;
+  }
+  if (error instanceof Error && error.message) return error.message;
+  return fallback;
 };
 
 export const getLocalizedErrorMessage = (error: unknown, t: TranslationStructure): string => {

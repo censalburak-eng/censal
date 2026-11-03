@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { RoomMessage, SendMessageInput, PinnedListing, UpdateMessageInput } from '../types/messages.types';
-import { mapDatabaseError } from '../lib/errors';
+import { mapDatabaseError, AppError } from '../lib/errors';
 import { logger } from '../lib/logger';
 
 const log = logger.scope('messagesApi');
@@ -268,13 +268,13 @@ export const sendMessage = async (
     log.error('sendMessage HATA:', error.message, error.code, error.details);
 
     if (error.message?.includes('Çok hızlı')) {
-      throw new Error('Çok hızlı mesaj gönderiyorsunuz (3 saniye bekleme süresi).');
+      throw new AppError('RATE_LIMITED', 'Çok hızlı mesaj gönderiyorsunuz (3 saniye bekleme süresi).', error);
     }
     if (error.message?.includes('engellenmiştir')) {
-      throw new Error('Hesabınız engellenmiştir.');
+      throw new AppError('ACCOUNT_BANNED', 'Hesabınız engellenmiştir.', error);
     }
     if (error.code === '42501') {
-      throw new Error('Mesaj göndermek için giriş yapmanız gerekiyor.');
+      throw new AppError('UNAUTHORIZED', 'Mesaj göndermek için giriş yapmanız gerekiyor.', error);
     }
 
     throw mapDatabaseError(error);
@@ -366,13 +366,13 @@ export const reservePinListing = async (
     log.error('reservePinListing HATA:', error.message, error.code, error.details);
 
     if (error.message?.includes('PIN_QUOTA_FULL')) {
-      throw new Error('Bu odanın bugünkü sabit ilan kontenjanı dolmuştur.');
+      throw new AppError('PIN_QUOTA_FULL', 'Bu odanın bugünkü sabit ilan kontenjanı dolmuştur.', error);
     }
     if (error.message?.includes('NOT_OWNER')) {
-      throw new Error('Sadece kendi mesajınızı sabitleyebilirsiniz.');
+      throw new AppError('PIN_NOT_OWNER', 'Sadece kendi mesajınızı sabitleyebilirsiniz.', error);
     }
     if (error.message?.includes('ALREADY_PINNED')) {
-      throw new Error('Bu mesaj zaten sabitlenmiş. Önce mevcut sabitlemeyi kaldırın.');
+      throw new AppError('PIN_ALREADY_PINNED', 'Bu mesaj zaten sabitlenmiş. Önce mevcut sabitlemeyi kaldırın.', error);
     }
     throw mapDatabaseError(error);
   }
