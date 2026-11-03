@@ -275,22 +275,27 @@ export const useRevenueCat = (): UseRevenueCatResult => {
     pinProduct?.priceString ??
     null;
 
+  // Pin tek seferlik bir üründür: başarı, Pro yetkisine değil mağazanın satın almayı tamamlamasına (customerInfo dönmesine) bağlıdır.
+  // Paket/ürün yoksa veya SDK yapılandırılmamışsa success:false döner ve pin verilmez.
   const purchasePin = async () => {
-    if (pin24hPackage) {
-      return await purchase(pin24hPackage);
+    const res = pin24hPackage
+      ? await executePurchase(pin24hPackage)
+      : pinProduct
+        ? await purchaseStoreProduct(pinProduct)
+        : null;
+
+    if (!res) {
+      return { success: false, userCancelled: false, error: undefined };
     }
-    if (pinProduct) {
-      const res = await purchaseStoreProduct(pinProduct);
-      return {
-        success: !res.userCancelled && !res.error,
-        userCancelled: res.userCancelled,
-        error: res.error,
-      };
+
+    if (res.customerInfo) {
+      setCustomerInfo(res.customerInfo);
     }
+
     return {
-      success: false,
-      userCancelled: false,
-      error: undefined,
+      success: !!res.customerInfo && !res.userCancelled && !res.error,
+      userCancelled: res.userCancelled,
+      error: res.error,
     };
   };
 

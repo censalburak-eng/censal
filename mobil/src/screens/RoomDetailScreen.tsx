@@ -92,7 +92,7 @@ export const RoomDetailScreen: React.FC<RoomDetailScreenProps> = ({ roomId }) =>
   const { data: pinnedListings = [] } = usePinnedListings(roomId);
 
 
-  const { packages, pinPriceString, purchasePin, purchase: purchaseRevenueCatPackage } = useRevenueCat();
+  const { packages, pinPriceString, purchasePin, refetchOfferings, purchase: purchaseRevenueCatPackage } = useRevenueCat();
   const [isPurchasingPin, setIsPurchasingPin] = useState(false);
 
   // Sabit ilan fiyatı — yalnızca app_settings'ten gelir (admin panelinden kontrol edilir)
@@ -408,10 +408,12 @@ export const RoomDetailScreen: React.FC<RoomDetailScreenProps> = ({ roomId }) =>
           return;
         }
 
-        if (purchaseRes.error) {
+        // Satın alma tamamlanmadıysa (hata, mağaza/ürün yüklenemedi) pin kesinlikle verilmez
+        if (!purchaseRes.success) {
           setIsPurchasingPin(false);
           setPinningMessage(null);
-          showInfo(t.common.error, purchaseRes.error.message);
+          showInfo(t.common.error, purchaseRes.error?.message ?? t.paywall.storeUnavailable);
+          if (!purchaseRes.error) refetchOfferings().catch(() => {});
           return;
         }
 
