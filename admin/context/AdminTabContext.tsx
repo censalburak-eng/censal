@@ -31,12 +31,19 @@ export function AdminTabProvider({
   children: React.ReactNode;
   initialTab?: AdminTab;
 }) {
-  const [activeTab, setActiveTabState] = React.useState<AdminTab>(initialTab);
+  const [activeTab, setActiveTabState] = React.useState<AdminTab>(() => {
+    if (typeof window !== "undefined") {
+      const p = new URLSearchParams(window.location.search).get("tab") as AdminTab;
+      if (p && tabLoaders[p]) return p;
+    }
+    return tabLoaders[initialTab] ? initialTab : "overview";
+  });
+
   const [visitedTabs, setVisitedTabs] = React.useState<Set<AdminTab>>(
-    () => new Set([initialTab])
+    () => new Set([activeTab])
   );
 
-  const preloadedRef = React.useRef<Set<AdminTab>>(new Set([initialTab]));
+  const preloadedRef = React.useRef<Set<AdminTab>>(new Set([activeTab]));
 
   // Sekmeyi arka planda (hover veya boşta iken) önceden indir
   const preloadTab = React.useCallback((tab: AdminTab) => {
@@ -62,7 +69,7 @@ export function AdminTabProvider({
         const url = new URL(window.location.href);
         if (url.searchParams.get("tab") !== tab) {
           url.searchParams.set("tab", tab);
-          window.history.replaceState({ tab }, "", url.toString());
+          window.history.pushState({ tab }, "", url.toString());
         }
       }
     },

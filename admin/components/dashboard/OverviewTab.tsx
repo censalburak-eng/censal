@@ -6,6 +6,8 @@ import { useAppSettings } from "@/hooks/useSettings";
 import { usePayments } from "@/hooks/usePayments";
 import { useModeration } from "@/hooks/useModeration";
 import { useUsers } from "@/hooks/useUsers";
+import { useAdminTab } from "@/context/AdminTabContext";
+import type { AdminTab } from "@/components/app-sidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,16 +28,30 @@ export function OverviewTab() {
   const { stats, payments } = usePayments();
   const { reports } = useModeration();
   const { users } = useUsers();
+  const { setActiveTab, preloadTab } = useAdminTab();
 
   const isFreeMode = Boolean(settings?.free_mode);
   const pendingReports = reports.filter((r) => r.status === "pending");
+
+  const handleNavigate = (tab: AdminTab) => (e: React.MouseEvent) => {
+    if (!e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) {
+      e.preventDefault();
+      e.stopPropagation();
+      setActiveTab(tab);
+    }
+  };
 
   return (
     <div className="space-y-6">
       {/* Üst Metrik Kartları */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* 1. Free Mode Durumu */}
-        <Link href="/?tab=settings" className="block group">
+        <Link
+          href="/?tab=settings"
+          className="block group"
+          onClick={handleNavigate("settings")}
+          onMouseEnter={() => preloadTab("settings")}
+        >
           <Card className="h-full hover:border-primary/50 transition-colors">
             <CardHeader className="pb-2">
               <CardDescription className="text-xs font-semibold uppercase">Uygulama Modu</CardDescription>
@@ -59,7 +75,12 @@ export function OverviewTab() {
         </Link>
 
         {/* 2. Toplam Ciro */}
-        <Link href="/?tab=payments" className="block group">
+        <Link
+          href="/?tab=payments"
+          className="block group"
+          onClick={handleNavigate("payments")}
+          onMouseEnter={() => preloadTab("payments")}
+        >
           <Card className="h-full hover:border-primary/50 transition-colors">
             <CardHeader className="pb-2">
               <CardDescription className="text-xs font-semibold uppercase">Toplam Ciro</CardDescription>
@@ -78,7 +99,12 @@ export function OverviewTab() {
         </Link>
 
         {/* 3. Bekleyen Şikayetler */}
-        <Link href="/?tab=moderation" className="block group">
+        <Link
+          href="/?tab=moderation"
+          className="block group"
+          onClick={handleNavigate("moderation")}
+          onMouseEnter={() => preloadTab("moderation")}
+        >
           <Card className="h-full hover:border-primary/50 transition-colors">
             <CardHeader className="pb-2">
               <CardDescription className="text-xs font-semibold uppercase">Bekleyen Şikayetler</CardDescription>
@@ -97,7 +123,12 @@ export function OverviewTab() {
         </Link>
 
         {/* 4. Toplam Üye */}
-        <Link href="/?tab=users" className="block group">
+        <Link
+          href="/?tab=users"
+          className="block group"
+          onClick={handleNavigate("users")}
+          onMouseEnter={() => preloadTab("users")}
+        >
           <Card className="h-full hover:border-primary/50 transition-colors">
             <CardHeader className="pb-2">
               <CardDescription className="text-xs font-semibold uppercase">Kayıtlı Kullanıcılar</CardDescription>
@@ -126,7 +157,12 @@ export function OverviewTab() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Link href="/?tab=settings" className="block group">
+            <Link
+              href="/?tab=settings"
+              className="block group"
+              onClick={handleNavigate("settings")}
+              onMouseEnter={() => preloadTab("settings")}
+            >
               <div className="p-4 rounded-xl border bg-card hover:bg-muted/30 cursor-pointer transition-all space-y-2 h-full">
                 <div className="flex items-center justify-between">
                   <span className="p-2 rounded-lg bg-primary/10 text-primary">
@@ -141,7 +177,12 @@ export function OverviewTab() {
               </div>
             </Link>
 
-            <Link href="/?tab=quotas" className="block group">
+            <Link
+              href="/?tab=quotas"
+              className="block group"
+              onClick={handleNavigate("quotas")}
+              onMouseEnter={() => preloadTab("quotas")}
+            >
               <div className="p-4 rounded-xl border bg-card hover:bg-muted/30 cursor-pointer transition-all space-y-2 h-full">
                 <div className="flex items-center justify-between">
                   <span className="p-2 rounded-lg bg-blue-500/10 text-blue-600">
@@ -156,7 +197,12 @@ export function OverviewTab() {
               </div>
             </Link>
 
-            <Link href="/?tab=users" className="block group">
+            <Link
+              href="/?tab=users"
+              className="block group"
+              onClick={handleNavigate("users")}
+              onMouseEnter={() => preloadTab("users")}
+            >
               <div className="p-4 rounded-xl border bg-card hover:bg-muted/30 cursor-pointer transition-all space-y-2 h-full">
                 <div className="flex items-center justify-between">
                   <span className="p-2 rounded-lg bg-purple-500/10 text-purple-600">
@@ -171,7 +217,12 @@ export function OverviewTab() {
               </div>
             </Link>
 
-            <Link href="/?tab=payments" className="block group">
+            <Link
+              href="/?tab=payments"
+              className="block group"
+              onClick={handleNavigate("payments")}
+              onMouseEnter={() => preloadTab("payments")}
+            >
               <div className="p-4 rounded-xl border bg-card hover:bg-muted/30 cursor-pointer transition-all space-y-2 h-full">
                 <div className="flex items-center justify-between">
                   <span className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600">
@@ -186,7 +237,12 @@ export function OverviewTab() {
               </div>
             </Link>
 
-            <Link href="/?tab=moderation" className="block group md:col-span-2">
+            <Link
+              href="/?tab=moderation"
+              className="block group md:col-span-2"
+              onClick={handleNavigate("moderation")}
+              onMouseEnter={() => preloadTab("moderation")}
+            >
               <div className="p-4 rounded-xl border bg-card hover:bg-muted/30 cursor-pointer transition-all space-y-2 h-full">
                 <div className="flex items-center justify-between">
                   <span className="p-2 rounded-lg bg-rose-500/10 text-rose-600">
@@ -211,7 +267,11 @@ export function OverviewTab() {
             <CardTitle className="text-base font-semibold">Son Canlı İşlemler</CardTitle>
             <CardDescription>Uygulama üzerinden gerçekleşen en son ödemeler.</CardDescription>
           </div>
-          <Link href="/?tab=payments">
+          <Link
+            href="/?tab=payments"
+            onClick={handleNavigate("payments")}
+            onMouseEnter={() => preloadTab("payments")}
+          >
             <Button variant="ghost" size="sm" className="text-xs">
               Tümünü Gör <ArrowRightIcon className="size-3.5 ms-1" />
             </Button>

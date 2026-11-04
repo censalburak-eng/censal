@@ -7,27 +7,31 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { SparklesIcon, LockIcon, UnlockIcon, RefreshCwIcon, TagIcon, ArrowRightIcon, SaveIcon, DollarSignIcon } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { toast } from "sonner";
+import {
+  SparklesIcon,
+  LockIcon,
+  UnlockIcon,
+  RefreshCwIcon,
+  TagIcon,
+  ArrowRightIcon,
+  MapPinIcon,
+  CreditCardIcon,
+  HistoryIcon,
+  LayoutDashboardIcon,
+  SlidersHorizontalIcon,
+} from "lucide-react";
 import { useAdminTab } from "@/context/AdminTabContext";
+import type { AdminTab } from "@/components/app-sidebar";
 
 export function SettingsTab() {
   const { settings, isLoading, isError, updateSettings, isUpdating } = useAppSettings();
-  const { setActiveTab } = useAdminTab();
+  const { setActiveTab, preloadTab } = useAdminTab();
 
   const [freeMode, setFreeMode] = React.useState<boolean>(false);
-  const [monthlyPrice, setMonthlyPrice] = React.useState<string>("");
-  const [yearlyPrice, setYearlyPrice] = React.useState<string>("");
-  const [pinPrice, setPinPrice] = React.useState<string>("");
 
   React.useEffect(() => {
     if (settings) {
       setFreeMode(Boolean(settings.free_mode));
-      setMonthlyPrice(settings.price_monthly !== undefined ? String(settings.price_monthly) : "");
-      setYearlyPrice(settings.price_yearly !== undefined ? String(settings.price_yearly) : "");
-      setPinPrice(settings.price_pin_24h !== undefined ? String(settings.price_pin_24h) : "");
     }
   }, [settings]);
 
@@ -38,30 +42,12 @@ export function SettingsTab() {
     });
   };
 
-  const handleSavePrices = (e: React.FormEvent) => {
-    e.preventDefault();
-    const pMonthly = parseFloat(monthlyPrice.replace(",", "."));
-    const pYearly = parseFloat(yearlyPrice.replace(",", "."));
-    const pPin = parseFloat(pinPrice.replace(",", "."));
-
-    if (isNaN(pMonthly) || pMonthly <= 0) {
-      toast.error("Lütfen geçerli bir aylık abonelik fiyatı girin.");
-      return;
+  const handleNavigate = (tab: AdminTab) => (e: React.MouseEvent) => {
+    if (!e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) {
+      e.preventDefault();
+      e.stopPropagation();
+      setActiveTab(tab);
     }
-    if (isNaN(pYearly) || pYearly <= 0) {
-      toast.error("Lütfen geçerli bir yıllık abonelik fiyatı girin.");
-      return;
-    }
-    if (isNaN(pPin) || pPin <= 0) {
-      toast.error("Lütfen geçerli bir sabitleme fiyatı girin.");
-      return;
-    }
-
-    updateSettings({
-      price_monthly: pMonthly,
-      price_yearly: pYearly,
-      price_pin_24h: pPin,
-    });
   };
 
   if (isLoading) {
@@ -154,12 +140,14 @@ export function SettingsTab() {
             </p>
 
             <Button
-              variant="outline"
+              variant="default"
               className="w-full gap-2 justify-between cursor-pointer"
-              onClick={() => setActiveTab("pricing")}
+              onClick={handleNavigate("pricing")}
+              onMouseEnter={() => preloadTab("pricing")}
+              render={<Link href="/?tab=pricing" />}
             >
-              <span className="flex items-center gap-2">
-                <TagIcon className="size-4 text-primary" />
+              <span className="flex items-center gap-2 font-medium">
+                <TagIcon className="size-4" />
                 Google Play Fiyat Yönetimine Git
               </span>
               <ArrowRightIcon className="size-4" />
@@ -167,6 +155,98 @@ export function SettingsTab() {
           </CardContent>
         </Card>
       </div>
+
+      {/* 3. İlgili Sistem ve Yönetim Bölümleri Hızlı Yönlendirme */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2">
+            <SlidersHorizontalIcon className="size-5 text-primary" />
+            <CardTitle className="text-base font-semibold">İlgili Yönetim ve Sistem Bölümleri</CardTitle>
+          </div>
+          <CardDescription>
+            Sistem ayarlarından doğrudan ilgili yönetim modüllerine geçiş yapabilirsiniz.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <Button
+              variant="outline"
+              className="h-auto p-4 flex flex-col items-start gap-2 text-start justify-between hover:bg-muted/50 cursor-pointer"
+              onClick={handleNavigate("quotas")}
+              onMouseEnter={() => preloadTab("quotas")}
+              render={<Link href="/?tab=quotas" />}
+            >
+              <div className="flex items-center justify-between w-full">
+                <span className="p-2 rounded-lg bg-blue-500/10 text-blue-600">
+                  <MapPinIcon className="size-4" />
+                </span>
+                <ArrowRightIcon className="size-3.5 text-muted-foreground" />
+              </div>
+              <div>
+                <div className="font-semibold text-sm text-foreground">81 İl Kontenjanları</div>
+                <div className="text-xs text-muted-foreground mt-0.5">Oda vitrini sabitleme limitleri</div>
+              </div>
+            </Button>
+
+            <Button
+              variant="outline"
+              className="h-auto p-4 flex flex-col items-start gap-2 text-start justify-between hover:bg-muted/50 cursor-pointer"
+              onClick={handleNavigate("payments")}
+              onMouseEnter={() => preloadTab("payments")}
+              render={<Link href="/?tab=payments" />}
+            >
+              <div className="flex items-center justify-between w-full">
+                <span className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600">
+                  <CreditCardIcon className="size-4" />
+                </span>
+                <ArrowRightIcon className="size-3.5 text-muted-foreground" />
+              </div>
+              <div>
+                <div className="font-semibold text-sm text-foreground">Ödeme & Ciro Takip</div>
+                <div className="text-xs text-muted-foreground mt-0.5">Canlı işlemler ve ciro raporu</div>
+              </div>
+            </Button>
+
+            <Button
+              variant="outline"
+              className="h-auto p-4 flex flex-col items-start gap-2 text-start justify-between hover:bg-muted/50 cursor-pointer"
+              onClick={handleNavigate("logs")}
+              onMouseEnter={() => preloadTab("logs")}
+              render={<Link href="/?tab=logs" />}
+            >
+              <div className="flex items-center justify-between w-full">
+                <span className="p-2 rounded-lg bg-slate-500/10 text-slate-600">
+                  <HistoryIcon className="size-4" />
+                </span>
+                <ArrowRightIcon className="size-3.5 text-muted-foreground" />
+              </div>
+              <div>
+                <div className="font-semibold text-sm text-foreground">Denetim Logları</div>
+                <div className="text-xs text-muted-foreground mt-0.5">Ayar ve yönetici geçmişi</div>
+              </div>
+            </Button>
+
+            <Button
+              variant="outline"
+              className="h-auto p-4 flex flex-col items-start gap-2 text-start justify-between hover:bg-muted/50 cursor-pointer"
+              onClick={handleNavigate("overview")}
+              onMouseEnter={() => preloadTab("overview")}
+              render={<Link href="/?tab=overview" />}
+            >
+              <div className="flex items-center justify-between w-full">
+                <span className="p-2 rounded-lg bg-primary/10 text-primary">
+                  <LayoutDashboardIcon className="size-4" />
+                </span>
+                <ArrowRightIcon className="size-3.5 text-muted-foreground" />
+              </div>
+              <div>
+                <div className="font-semibold text-sm text-foreground">Genel Bakışa Dön</div>
+                <div className="text-xs text-muted-foreground mt-0.5">Ana gösterge paneli</div>
+              </div>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
