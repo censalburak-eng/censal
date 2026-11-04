@@ -49,7 +49,7 @@ export function AdminTabProvider({
   const preloadTab = React.useCallback((tab: AdminTab) => {
     if (!preloadedRef.current.has(tab)) {
       preloadedRef.current.add(tab);
-      tabLoaders[tab]?.().catch(() => {});
+      tabLoaders[tab]?.().catch(() => { });
     }
   }, []);
 

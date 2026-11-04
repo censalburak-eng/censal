@@ -12,12 +12,13 @@ const log = logger.scope('Notifications');
 export const NOTIFICATIONS_STORAGE_KEY = '@censal/notifications_enabled';
 
 // Uygulama açıkken (foreground) gelen bildirimlerin nasıl gösterileceğini belirle
+// Kullanıcı uygulamadayken bildirimlerin rahatsız etmemesi için tüm gösterimler kapalı
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
+    shouldPlaySound: false,
+    shouldSetBadge: false,
+    shouldShowBanner: false,
+    shouldShowList: false,
   }),
 });
 

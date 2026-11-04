@@ -7,6 +7,7 @@ import { useTheme } from '../theme';
 import { Badge, PlateBadge } from './ui';
 import { useI18n } from '../i18n';
 import { localizeMessagePlaceholder } from '../i18n/placeholders';
+import { useOnlineUserIds } from '../hooks/usePresence';
 
 type ConversationListItemProps = {
   item: Conversation;
@@ -16,9 +17,11 @@ type ConversationListItemProps = {
 
 const ConversationListItemComponent: React.FC<ConversationListItemProps> = ({ item, onPress, onLongPress }) => {
   const { colors } = useTheme();
-  const { t, isRTL } = useI18n();
+  const { t, isRTL, language } = useI18n();
+  const onlineUserIds = useOnlineUserIds();
 
   const other = item.otherUser;
+  const isOnline = other?.id ? onlineUserIds.has(other.id) : false;
   const fullName = other ? `${other.first_name} ${other.last_name}`.trim() : t.common.user;
   const initials = fullName
     .split(' ')
@@ -57,36 +60,53 @@ const ConversationListItemComponent: React.FC<ConversationListItemProps> = ({ it
       accessibilityLabel={`${fullName} ile sohbet`}
     >
       {/* Avatar */}
-      <View
-        style={{
-          width: tokens.scale(48),
-          height: tokens.scale(48),
-          borderRadius: tokens.radii.full,
-          backgroundColor: colors.surfaceElevated,
-          borderWidth: 1.5,
-          borderColor: hasUnread ? colors.primary : colors.border,
-          alignItems: 'center',
-          justifyContent: 'center',
-          overflow: 'hidden',
-        }}
-      >
-        {other?.avatar_url ? (
-          <Image
-            source={{ uri: other.avatar_url }}
-            style={{ width: '100%', height: '100%' }}
-            contentFit="cover"
-            transition={150}
-          />
-        ) : (
-          <Text
+      <View style={{ position: 'relative' }}>
+        <View
+          style={{
+            width: tokens.scale(48),
+            height: tokens.scale(48),
+            borderRadius: tokens.radii.full,
+            backgroundColor: colors.surfaceElevated,
+            borderWidth: 1.5,
+            borderColor: hasUnread ? colors.primary : colors.border,
+            alignItems: 'center',
+            justifyContent: 'center',
+            overflow: 'hidden',
+          }}
+        >
+          {other?.avatar_url ? (
+            <Image
+              source={{ uri: other.avatar_url }}
+              style={{ width: '100%', height: '100%' }}
+              contentFit="cover"
+              transition={150}
+            />
+          ) : (
+            <Text
+              style={{
+                color: hasUnread ? colors.primary : colors.text,
+                fontSize: tokens.moderateScale(tokens.typography.fontSize.base),
+                fontWeight: tokens.typography.fontWeight.bold,
+              }}
+            >
+              {initials || 'U'}
+            </Text>
+          )}
+        </View>
+        {isOnline && (
+          <View
             style={{
-              color: hasUnread ? colors.primary : colors.text,
-              fontSize: tokens.moderateScale(tokens.typography.fontSize.base),
-              fontWeight: tokens.typography.fontWeight.bold,
+              position: 'absolute',
+              bottom: 0,
+              right: 0,
+              width: 14,
+              height: 14,
+              borderRadius: 7,
+              backgroundColor: '#22C55E',
+              borderWidth: 2,
+              borderColor: colors.surface,
             }}
-          >
-            {initials || 'U'}
-          </Text>
+          />
         )}
       </View>
 

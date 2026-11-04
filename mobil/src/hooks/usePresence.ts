@@ -50,8 +50,9 @@ function recompute() {
     if (key === me.key) continue; // Kendimizi aşağıda lokal state ile ekliyoruz (optimistic)
     const p = presences[presences.length - 1]; // Key başına tek kişi
     if (!p) continue;
-    if (typeof p.room_id === 'number') {
-      counts[p.room_id] = (counts[p.room_id] ?? 0) + 1;
+    const rId = typeof p.room_id === 'number' ? p.room_id : (p.room_id ? Number(p.room_id) : null);
+    if (typeof rId === 'number' && !isNaN(rId)) {
+      counts[rId] = (counts[rId] ?? 0) + 1;
     }
     if (!key.startsWith('guest_')) {
       ids.add(key);
@@ -83,13 +84,16 @@ function recompute() {
   }
 }
 
-const trackMe = () => {
-  if (globalPresenceChannel && globalPresenceChannel.state === 'joined') {
-    globalPresenceChannel.track({
+const trackMe = async () => {
+  if (!globalPresenceChannel) return;
+  try {
+    await globalPresenceChannel.track({
       user_id: me.userId,
       room_id: me.roomId,
       online_at: new Date().toISOString(),
     });
+  } catch (err) {
+    log.warn('trackMe error:', err);
   }
 };
 
@@ -120,7 +124,7 @@ function closeGlobalChannel() {
 function createGlobalChannel(myPresenceKey: string) {
   closeGlobalChannel();
 
-  log.info('Realtime global_presence kanalı başlatılıyor...');
+  log.info('Realtime global_presence kanalı başlatılıyor, key:', myPresenceKey);
   const ch = supabase.channel('global_presence', {
     config: {
       presence: {
@@ -129,18 +133,22 @@ function createGlobalChannel(myPresenceKey: string) {
     },
   });
 
-  ch.on('presence', { event: 'sync' }, () => {
-    if (!globalPresenceChannel) return;
-    currentPresenceState = globalPresenceChannel.presenceState() as Record<string, PresencePayload[]>;
-    recompute();
-  }).subscribe((status) => {
-    log.info(`[Presence] Kanal durumu: ${status}`);
-    if (status === 'SUBSCRIBED') {
-      trackMe();
-    }
-  });
-
   globalPresenceChannel = ch;
+
+  const handlePresenceChange = () => {
+    currentPresenceState = ch.presenceState() as Record<string, PresencePayload[]>;
+    recompute();
+  };
+
+  ch.on('presence', { event: 'sync' }, handlePresenceChange)
+    .on('presence', { event: 'join' }, handlePresenceChange)
+    .on('presence', { event: 'leave' }, handlePresenceChange)
+    .subscribe(async (status) => {
+      log.info(`[Presence] Kanal durumu: ${status}`);
+      if (status === 'SUBSCRIBED') {
+        await trackMe();
+      }
+    });
 }
 
 /**
@@ -157,13 +165,17 @@ export const usePresenceConnection = (userId?: string) => {
       touchLastSeen();
     }, 60_000);
 
-    const sub = AppState.addEventListener('change', (s) => {
+    const sub = AppState.addEventListener('change', async (s) => {
       if (s === 'active') {
         touchLastSeen();
-        trackMe();
+        if (!globalPresenceChannel || globalPresenceChannel.state === 'closed' || globalPresenceChannel.state === 'errored') {
+          createGlobalChannel(me.key);
+        } else {
+          await trackMe();
+        }
       } else {
         // Arka plana gidince odadan düş, untrack çağır
-        globalPresenceChannel?.untrack();
+        globalPresenceChannel?.untrack().catch(() => {});
       }
     });
 
